@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # proj_nape
 
 A new Flutter project.
@@ -14,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# nape---gastronomic-administrative-
+>>>>>>> 607cf4993c1b62d68449f7be159b55074a091fc1
