@@ -142,10 +142,6 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
-                  Text(
-                    'Olá, João 👋',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
                   SizedBox(height: 4),
                   Text('Resumo do dia'),
                   SizedBox(height: 20),
