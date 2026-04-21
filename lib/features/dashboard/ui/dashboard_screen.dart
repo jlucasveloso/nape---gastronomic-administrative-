@@ -4,6 +4,9 @@ import 'package:proj_nape/features/dashboard/model/despesa.dart';
 import 'package:proj_nape/features/dashboard/model/venda.dart';
 import 'package:proj_nape/shared/widgets/info_card.dart';
 import 'package:intl/intl.dart';
+import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
+import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
+import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
 
 final _hoje = DateTime.now();
 
@@ -320,7 +323,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     subtitulo: '$nVendas itens vendidos',
                     cor: const Color(0xFF2D74C4),
                     icone: Icons.trending_up,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const FaturamentoScreen()),
+  );
+                    },
                   ),
                   const SizedBox(height: 12),
                   InfoCard(
@@ -329,7 +337,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     subtitulo: '$nCategorias categorias de despesa',
                     cor: const Color(0xFFC2463C),
                     icone: Icons.trending_down,
-                    onTap: () {},
+                    onTap: () {
+Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const DespesasScreen()),
+  );
+
+                    },
                   ),
                   const SizedBox(height: 12),
                   InfoCard(
@@ -338,7 +352,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     subtitulo: subtituloLucro,
                     cor: corLucro,
                     icone: iconeLucro,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const LucroScreen()),
+  );
+                    },
                   ),
                 ],
               ),

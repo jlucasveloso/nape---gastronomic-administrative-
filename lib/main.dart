@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:proj_nape/features/dashboard/ui/dashboard_screen.dart';
+import 'package:proj_nape/main_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -62,10 +62,10 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const DashboardScreen(),
+                      builder: (_) => const MainScreen(),
                     ),
                   );
                 },
