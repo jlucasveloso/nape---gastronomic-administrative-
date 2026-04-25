@@ -22,12 +22,12 @@ class DashboardController {
       faturamentoTotal == 0 ? 0 : (lucro / faturamentoTotal) * 100;
 
   Map<String, double> get faturamentoPorCategoria {
-    final Map<String, double> resultado = {};
-    for (final v in vendas) {
-      resultado[v.categoria] = (resultado[v.categoria] ?? 0) + v.valorTotal;
-    }
-    return resultado;
+  final Map<String, double> resultado = {};
+  for (final v in vendas) {
+    resultado[v.categoriaSnapshot] = (resultado[v.categoriaSnapshot] ?? 0) + v.valorTotal;
   }
+  return resultado;
+}
 
   Map<String, double> get custosPorCategoria {
     final Map<String, double> resultado = {};

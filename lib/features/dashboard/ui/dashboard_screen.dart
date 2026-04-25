@@ -1,26 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:proj_nape/app_state.dart';
 import 'package:proj_nape/features/dashboard/controller/dashboard_controller.dart';
-import 'package:proj_nape/features/dashboard/model/despesa.dart';
-import 'package:proj_nape/features/dashboard/model/venda.dart';
-import 'package:proj_nape/shared/widgets/info_card.dart';
-import 'package:intl/intl.dart';
 import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
-
-final _hoje = DateTime.now();
-
-final List<Venda> _vendas = [
-  Venda(id: '1', produto: 'Prato do dia',    categoria: 'Pratos',     valorUnitario: 35.00, quantidade: 12, data: _hoje),
-  Venda(id: '2', produto: 'Suco de laranja', categoria: 'Bebidas',    valorUnitario: 10.00, quantidade: 8,  data: _hoje),
-  Venda(id: '3', produto: 'Sobremesa',       categoria: 'Sobremesas', valorUnitario: 15.00, quantidade: 5,  data: _hoje),
-];
-
-final List<Despesa> _despesas = [
-  Despesa(id: '1', descricao: 'Compra de carne',  categoria: 'Ingredientes', valor: 320.00, data: _hoje),
-  Despesa(id: '2', descricao: 'Conta de luz',     categoria: 'Utilities',    valor: 180.00, data: _hoje),
-  Despesa(id: '3', descricao: 'Salário diarista', categoria: 'Funcionários', valor: 150.00, data: _hoje),
-];
+import 'package:proj_nape/shared/widgets/info_card.dart';
+import 'package:intl/intl.dart';
+import 'package:proj_nape/features/perfil/ui/perfil_bottom_sheet.dart';
 
 // ── Períodos ──────────────────────────────────────────────────────────────────
 
@@ -126,7 +113,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Alça
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
               width: 36,
@@ -158,7 +144,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   onTap: () => Navigator.pop(context, p),
                 )),
-            // Opção calendário
             ListTile(
               leading: Icon(
                 _periodoSelecionado == _Periodo.custom
@@ -201,15 +186,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
     final intervalo = _intervalo;
 
-    final vendasFiltradas = _vendas
+    final vendasFiltradas = appState.vendas
         .where((v) =>
             !v.data.isBefore(intervalo.start) &&
             !v.data.isAfter(intervalo.end))
         .toList();
 
-    final despesasFiltradas = _despesas
+    final despesasFiltradas = appState.despesas
         .where((d) =>
             !d.data.isBefore(intervalo.start) &&
             !d.data.isAfter(intervalo.end))
@@ -251,14 +237,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 bottomRight: Radius.circular(24),
               ),
             ),
-            child: const Text(
-              'Dashboard',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    const Text(
+      'Dashboard',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const PerfilBottomSheet(),
+        );
+      },
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.person_outline,
+          color: Colors.white,
+          size: 22,
+        ),
+      ),
+    ),
+  ],
+),
           ),
 
           // ── Conteúdo ────────────────────────────────────────────────────
@@ -266,101 +279,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Container(
               color: const Color(0xFFE9E4DF),
               child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
+                      padding: const EdgeInsets.all(20),
+                      children: [
 
-                  // ── Botão seletor de período ─────────────────────────────
-                  GestureDetector(
-                    onTap: () => _abrirSeletor(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.calendar_month_outlined,
-                              size: 16, color: Color(0xFFC2463C)),
-                          const SizedBox(width: 8),
-                          Text(
-                            _labelAtivo,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                        // ── Seletor de período ───────────────────────────
+                        GestureDetector(
+                          onTap: () => _abrirSeletor(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.calendar_month_outlined,
+                                    size: 16, color: Color(0xFFC2463C)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _labelAtivo,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(Icons.keyboard_arrow_down,
+                                    size: 18, color: Colors.grey.shade500),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.keyboard_arrow_down,
-                              size: 18, color: Colors.grey.shade500),
-                        ],
-                      ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── Label resumo ─────────────────────────────────
+                        const Text(
+                          'Resumo',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black54,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // ── Cards ────────────────────────────────────────
+                        InfoCard(
+                          titulo: 'Faturamento',
+                          valor: fmt.format(controller.faturamentoTotal),
+                          subtitulo: '$nVendas itens vendidos',
+                          cor: const Color(0xFF2D74C4),
+                          icone: Icons.trending_up,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const FaturamentoScreen()),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        InfoCard(
+                          titulo: 'Custos',
+                          valor: fmt.format(controller.custosTotal),
+                          subtitulo: '$nCategorias categorias de despesa',
+                          cor: const Color(0xFFC2463C),
+                          icone: Icons.trending_down,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const DespesasScreen()),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        InfoCard(
+                          titulo: tituloLucro,
+                          valor: valorLucro,
+                          subtitulo: subtituloLucro,
+                          cor: corLucro,
+                          icone: iconeLucro,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const LucroScreen()),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Label resumo ─────────────────────────────────────────
-                  const Text(
-                    'Resumo',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black54,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ── Cards ────────────────────────────────────────────────
-                  InfoCard(
-                    titulo: 'Faturamento',
-                    valor: fmt.format(controller.faturamentoTotal),
-                    subtitulo: '$nVendas itens vendidos',
-                    cor: const Color(0xFF2D74C4),
-                    icone: Icons.trending_up,
-                    onTap: () {
-                      Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const FaturamentoScreen()),
-  );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  InfoCard(
-                    titulo: 'Custos',
-                    valor: fmt.format(controller.custosTotal),
-                    subtitulo: '$nCategorias categorias de despesa',
-                    cor: const Color(0xFFC2463C),
-                    icone: Icons.trending_down,
-                    onTap: () {
-Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const DespesasScreen()),
-  );
-
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  InfoCard(
-                    titulo: tituloLucro,
-                    valor: valorLucro,
-                    subtitulo: subtituloLucro,
-                    cor: corLucro,
-                    icone: iconeLucro,
-                    onTap: () {
-                      Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const LucroScreen()),
-  );
-                    },
-                  ),
-                ],
-              ),
             ),
           ),
         ],

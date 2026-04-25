@@ -1,25 +1,26 @@
 class Venda {
   final String id;
-  final String produto;
-  final String categoria;
-  final double valorUnitario;
+  final String produtoId;
+  final String nomeProdutoSnapshot;
+  final String categoriaSnapshot;
+  final double precoUnitarioSnapshot;
   final int quantidade;
   final DateTime data;
-  final String? observacao;
 
   const Venda({
     required this.id,
-    required this.produto,
-    required this.categoria,
-    required this.valorUnitario,
+    required this.produtoId,
+    required this.nomeProdutoSnapshot,
+    required this.categoriaSnapshot,
+    required this.precoUnitarioSnapshot,
     required this.quantidade,
     required this.data,
-    this.observacao,
   });
 
-  double get valorTotal => valorUnitario * quantidade;
+  // Valor total desta venda (preço × quantidade)
+  double get valorTotal => precoUnitarioSnapshot * quantidade;
 
   @override
   String toString() =>
-      'Venda(produto: $produto, quantidade: $quantidade, total: $valorTotal, data: $data)';
+      'Venda(produto: $nomeProdutoSnapshot, quantidade: $quantidade, total: $valorTotal, data: $data)';
 }

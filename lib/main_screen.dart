@@ -3,6 +3,7 @@ import 'package:proj_nape/features/dashboard/ui/dashboard_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,6 +21,10 @@ class _MainScreenState extends State<MainScreen> {
     DespesasScreen(),
     LucroScreen(),
   ];
+
+  Future<void> _sair() async {
+    await Supabase.instance.client.auth.signOut();
+  }
 
   @override
   Widget build(BuildContext context) {

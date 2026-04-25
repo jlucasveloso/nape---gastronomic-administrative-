@@ -1,9 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:proj_nape/app_state.dart';
 import 'package:proj_nape/main_screen.dart';
+import 'package:proj_nape/features/perfil/ui/cadastro_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: '.env');
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppState(),
+      child: const MyApp(),
+    ),
+  );
 }
+
+final supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -17,13 +38,120 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF2B2B2B),
         fontFamily: 'Arial',
       ),
-      home: const LoginScreen(),
+      home: const AuthGate(),
     );
   }
 }
 
-class LoginScreen extends StatelessWidget {
+// ── AuthGate — decide para onde ir ao abrir o app ────────────────────────────
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: supabase.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          final session = snapshot.data!.session;
+          if (session != null) {
+            return const MainScreen();
+          }
+        }
+        return const LoginScreen();
+      },
+    );
+  }
+}
+
+// ── LoginScreen ───────────────────────────────────────────────────────────────
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _senhaController = TextEditingController();
+  bool _carregando = false;
+  String? _erro;
+
+  Future<void> _entrar() async {
+  final email = _emailController.text.trim();
+  final senha = _senhaController.text.trim();
+
+  if (email.isEmpty || senha.isEmpty) {
+    setState(() => _erro = 'Preencha o email e a senha.');
+    return;
+  }
+
+  setState(() {
+    _carregando = true;
+    _erro = null;
+  });
+
+  try {
+    await supabase.auth.signInWithPassword(
+      email: email,
+      password: senha,
+    );
+  } on AuthException catch (e) {
+    setState(() => _erro = e.message);
+  } finally {
+    if (mounted) setState(() => _carregando = false);
+  }
+}
+
+  Future<void> _criarConta() async {
+  final email = _emailController.text.trim();
+  final senha = _senhaController.text.trim();
+
+  print('DEBUG email: $email');
+  print('DEBUG senha: $senha');
+
+  if (email.isEmpty || senha.isEmpty) {
+    setState(() => _erro = 'Preencha o email e a senha.');
+    return;
+  }
+
+  if (senha.length < 6) {
+    setState(() => _erro = 'A senha deve ter pelo menos 6 caracteres.');
+    return;
+  }
+
+  setState(() {
+    _carregando = true;
+    _erro = null;
+  });
+
+  try {
+    final response = await supabase.auth.signUp(
+      email: email,
+      password: senha,
+    );
+    print('DEBUG response: ${response.user}');
+    if (mounted) {
+      setState(() => _erro = 'Conta criada! Verifique seu email para confirmar.');
+    }
+  } on AuthException catch (e) {
+    print('DEBUG AuthException: ${e.message}');
+    setState(() => _erro = e.message);
+  } catch (e) {
+    print('DEBUG erro generico: $e');
+    setState(() => _erro = e.toString());
+  } finally {
+    if (mounted) setState(() => _carregando = false);
+  }
+}
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,10 +177,28 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 40),
-              _input('Email'),
+              _input('Email', _emailController),
               const SizedBox(height: 16),
-              _input('Senha', obscure: true),
-              const SizedBox(height: 24),
+              _input('Senha', _senhaController, obscure: true),
+              const SizedBox(height: 8),
+
+              // Mensagem de erro ou confirmação
+              if (_erro != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _erro!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _erro!.contains('Verifique')
+                          ? Colors.green
+                          : Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+              const SizedBox(height: 16),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC2463C),
@@ -61,29 +207,42 @@ class LoginScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const MainScreen(),
-                    ),
-                  );
-                },
-                child: const Text('Entrar',
-                    style: TextStyle(color: Colors.white)),
+                onPressed: _carregando ? null : _entrar,
+                child: _carregando
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('Entrar',
+                        style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 12),
-              const Text.rich(
-                TextSpan(
-                  text: 'Não tem conta? ',
-                  children: [
-                    TextSpan(
-                      text: 'Criar conta',
-                      style: TextStyle(color: Color(0xFFC2463C)),
-                    ),
-                  ],
-                ),
-              ),
+              TextButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CadastroScreen(),
+      ),
+    );
+  },
+  child: const Text.rich(
+    TextSpan(
+      text: 'Não tem conta? ',
+      style: TextStyle(color: Colors.black87),
+      children: [
+        TextSpan(
+          text: 'Criar conta',
+          style: TextStyle(color: Color(0xFFC2463C)),
+        ),
+      ],
+    ),
+  ),
+),
               const SizedBox(height: 16),
             ],
           ),
@@ -92,8 +251,10 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _input(String hint, {bool obscure = false}) {
+  Widget _input(String hint, TextEditingController controller,
+      {bool obscure = false}) {
     return TextField(
+      controller: controller,
       obscureText: obscure,
       decoration: InputDecoration(
         hintText: hint,
