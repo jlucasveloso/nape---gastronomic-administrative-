@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:proj_nape/app_state.dart';
 import 'package:proj_nape/features/dashboard/controller/dashboard_controller.dart';
-import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
-import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
-import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
 import 'package:proj_nape/shared/widgets/info_card.dart';
+import 'package:proj_nape/main_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:proj_nape/features/perfil/ui/perfil_bottom_sheet.dart';
 
@@ -336,11 +334,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           subtitulo: '$nVendas itens vendidos',
                           cor: const Color(0xFF2D74C4),
                           icone: Icons.trending_up,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const FaturamentoScreen()),
-                          ),
+                          onTap: () => mainScreenKey.currentState?.trocarAba(1),
                         ),
                         const SizedBox(height: 12),
                         InfoCard(
@@ -349,11 +343,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           subtitulo: '$nCategorias categorias de despesa',
                           cor: const Color(0xFFC2463C),
                           icone: Icons.trending_down,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const DespesasScreen()),
-                          ),
+                          onTap: () => mainScreenKey.currentState?.trocarAba(2),
                         ),
                         const SizedBox(height: 12),
                         InfoCard(
@@ -362,11 +352,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           subtitulo: subtituloLucro,
                           cor: corLucro,
                           icone: iconeLucro,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const LucroScreen()),
-                          ),
+                          onTap: () => mainScreenKey.currentState?.trocarAba(3),
                         ),
                       ],
                     ),
