@@ -48,22 +48,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> desativarProduto(String id) async {
-    await _cardapioRepo.desativarProduto(id);
-    final index = _cardapio.indexWhere((p) => p.id == id);
-    if (index != -1) {
-      _cardapio[index] = ProdutoCardapio(
-        id: _cardapio[index].id,
-        nome: _cardapio[index].nome,
-        categoria: _cardapio[index].categoria,
-        preco: _cardapio[index].preco,
-        ativo: false,
-        dataCadastro: _cardapio[index].dataCadastro,
-      );
-      notifyListeners();
-    }
-  }
-
 Future<void> editarProduto(ProdutoCardapio produto) async {
   await _cardapioRepo.atualizarProduto(produto);
   final index = _cardapio.indexWhere((p) => p.id == produto.id);

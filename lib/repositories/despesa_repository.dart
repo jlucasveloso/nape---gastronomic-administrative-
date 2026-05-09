@@ -4,14 +4,17 @@ import 'package:proj_nape/features/dashboard/model/despesa.dart';
 class DespesaRepository {
   final _supabase = Supabase.instance.client;
 
-  // Busca todas as despesas do usuário logado
-  Future<List<Despesa>> buscarDespesas() async {
-    final userId = _supabase.auth.currentUser!.id;
+  String _resolverUserId(String? userId) {
+    return userId ?? _supabase.auth.currentUser!.id;
+  }
+
+  Future<List<Despesa>> buscarDespesas({String? userId}) async {
+    final id = _resolverUserId(userId);
 
     final data = await _supabase
         .from('despesas')
         .select()
-        .eq('user_id', userId)
+        .eq('user_id', id)
         .order('data', ascending: false);
 
     return data.map((map) => Despesa(
@@ -23,12 +26,11 @@ class DespesaRepository {
     )).toList();
   }
 
-  // Adiciona uma despesa no Supabase
-  Future<Despesa> adicionarDespesa(Despesa despesa) async {
-    final userId = _supabase.auth.currentUser!.id;
+  Future<Despesa> adicionarDespesa(Despesa despesa, {String? userId}) async {
+    final id = _resolverUserId(userId);
 
     final data = await _supabase.from('despesas').insert({
-      'user_id': userId,
+      'user_id': id,
       'descricao': despesa.descricao,
       'categoria': despesa.categoria,
       'valor': despesa.valor,
@@ -44,7 +46,15 @@ class DespesaRepository {
     );
   }
 
-  // Deleta uma despesa
+  Future<void> atualizarDespesa(Despesa despesa) async {
+    await _supabase.from('despesas').update({
+      'descricao': despesa.descricao,
+      'categoria': despesa.categoria,
+      'valor': despesa.valor,
+      'data': despesa.data.toIso8601String(),
+    }).eq('id', despesa.id);
+  }
+
   Future<void> deletarDespesa(String id) async {
     await _supabase.from('despesas').delete().eq('id', id);
   }

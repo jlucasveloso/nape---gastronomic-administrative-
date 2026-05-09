@@ -4,14 +4,17 @@ import 'package:proj_nape/features/dashboard/model/produto_cardapio.dart';
 class CardapioRepository {
   final _supabase = Supabase.instance.client;
 
-  // Busca todos os produtos do cardápio do usuário logado
-  Future<List<ProdutoCardapio>> buscarProdutos() async {
-    final userId = _supabase.auth.currentUser!.id;
+  String _resolverUserId(String? userId) {
+    return userId ?? _supabase.auth.currentUser!.id;
+  }
+
+  Future<List<ProdutoCardapio>> buscarProdutos({String? userId}) async {
+    final id = _resolverUserId(userId);
 
     final data = await _supabase
         .from('produtos_cardapio')
         .select()
-        .eq('user_id', userId)
+        .eq('user_id', id)
         .order('nome', ascending: true);
 
     return data.map((map) => ProdutoCardapio(
@@ -24,12 +27,12 @@ class CardapioRepository {
     )).toList();
   }
 
-  // Adiciona um produto no Supabase
-  Future<ProdutoCardapio> adicionarProduto(ProdutoCardapio produto) async {
-    final userId = _supabase.auth.currentUser!.id;
+  Future<ProdutoCardapio> adicionarProduto(ProdutoCardapio produto,
+      {String? userId}) async {
+    final id = _resolverUserId(userId);
 
     final data = await _supabase.from('produtos_cardapio').insert({
-      'user_id': userId,
+      'user_id': id,
       'nome': produto.nome,
       'categoria': produto.categoria,
       'preco': produto.preco,
@@ -46,7 +49,6 @@ class CardapioRepository {
     );
   }
 
-  // Atualiza um produto
   Future<void> atualizarProduto(ProdutoCardapio produto) async {
     await _supabase.from('produtos_cardapio').update({
       'nome': produto.nome,
@@ -56,16 +58,7 @@ class CardapioRepository {
     }).eq('id', produto.id);
   }
 
-  // Desativa um produto (soft delete)
-  Future<void> desativarProduto(String id) async {
-    await _supabase
-        .from('produtos_cardapio')
-        .update({'ativo': false})
-        .eq('id', id);
-  }
-
-// Deleta um produto (hard delete)
   Future<void> deletarProduto(String id) async {
-  await _supabase.from('produtos_cardapio').delete().eq('id', id);
-}
+    await _supabase.from('produtos_cardapio').delete().eq('id', id);
+  }
 }

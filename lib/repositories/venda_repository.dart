@@ -4,14 +4,19 @@ import 'package:proj_nape/features/dashboard/model/venda.dart';
 class VendaRepository {
   final _supabase = Supabase.instance.client;
 
-  // Busca todas as vendas do usuário logado
-  Future<List<Venda>> buscarVendas() async {
-    final userId = _supabase.auth.currentUser!.id;
+  // Se userId for passado (admin), busca dados daquele restaurante
+  // Se não for passado, usa o usuário logado
+  String _resolverUserId(String? userId) {
+    return userId ?? _supabase.auth.currentUser!.id;
+  }
+
+  Future<List<Venda>> buscarVendas({String? userId}) async {
+    final id = _resolverUserId(userId);
 
     final data = await _supabase
         .from('vendas')
         .select()
-        .eq('user_id', userId)
+        .eq('user_id', id)
         .order('data', ascending: false);
 
     return data.map((map) => Venda(
@@ -25,12 +30,11 @@ class VendaRepository {
     )).toList();
   }
 
-  // Adiciona uma venda no Supabase
-  Future<Venda> adicionarVenda(Venda venda) async {
-    final userId = _supabase.auth.currentUser!.id;
+  Future<Venda> adicionarVenda(Venda venda, {String? userId}) async {
+    final id = _resolverUserId(userId);
 
     final data = await _supabase.from('vendas').insert({
-      'user_id': userId,
+      'user_id': id,
       'produto_id': venda.produtoId,
       'nome_produto_snapshot': venda.nomeProdutoSnapshot,
       'categoria_snapshot': venda.categoriaSnapshot,
@@ -50,7 +54,16 @@ class VendaRepository {
     );
   }
 
-  // Deleta uma venda
+  Future<void> atualizarVenda(Venda venda) async {
+    await _supabase.from('vendas').update({
+      'nome_produto_snapshot': venda.nomeProdutoSnapshot,
+      'categoria_snapshot': venda.categoriaSnapshot,
+      'preco_unitario_snapshot': venda.precoUnitarioSnapshot,
+      'quantidade': venda.quantidade,
+      'data': venda.data.toIso8601String(),
+    }).eq('id', venda.id);
+  }
+
   Future<void> deletarVenda(String id) async {
     await _supabase.from('vendas').delete().eq('id', id);
   }
