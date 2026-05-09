@@ -23,7 +23,6 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
   Future<void> _carregarPerfil() async {
     try {
       final userId = supabase.auth.currentUser!.id;
-
       final data = await supabase
           .from('perfis')
           .select()
@@ -52,24 +51,23 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Alça
           Container(
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey,
+              color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
           const SizedBox(height: 24),
 
+          // Avatar
           Container(
             width: 64,
             height: 64,
@@ -83,13 +81,11 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
               color: Color(0xFFC2463C),
             ),
           ),
-
           const SizedBox(height: 16),
 
+          // Dados do perfil
           if (_carregando)
-            const CircularProgressIndicator(
-              color: Color(0xFFC2463C),
-            )
+            const CircularProgressIndicator(color: Color(0xFFC2463C))
           else ...[
             if (_perfil != null)
               Text(
@@ -100,9 +96,7 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
                   color: Colors.black87,
                 ),
               ),
-
             const SizedBox(height: 4),
-
             Text(
               email,
               style: const TextStyle(
@@ -110,7 +104,6 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
                 color: Colors.black54,
               ),
             ),
-
             if (_perfil?.telefone != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -121,7 +114,6 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
                 ),
               ),
             ],
-
             if (_perfil?.cnpj != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -138,6 +130,7 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
           const Divider(),
           const SizedBox(height: 8),
 
+          // Botão sair
           ListTile(
             leading: const Icon(
               Icons.logout,
@@ -152,7 +145,6 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
             ),
             onTap: _sair,
           ),
-
           const SizedBox(height: 8),
         ],
       ),

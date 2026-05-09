@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-final supabase = Supabase.instance.client;
+import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:proj_nape/shared/temp_auth.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -16,8 +16,34 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final _senhaController = TextEditingController();
   final _telefoneController = TextEditingController();
   final _cnpjController = TextEditingController();
+
+  final _telefoneMask = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final _cnpjMask = MaskTextInputFormatter(
+    mask: '##.###.###/####-##',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  bool _temMaiuscula = false;
+  bool _temNumero = false;
+  bool _temEspecial = false;
+  bool _tem8Caracteres = false;
+  bool _mostrarSenha = false;
+
   bool _carregando = false;
   String? _erro;
+
+  void _validarSenha(String senha) {
+    setState(() {
+      _temMaiuscula = senha.contains(RegExp(r'[A-Z]'));
+      _temNumero = senha.contains(RegExp(r'[0-9]'));
+      _temEspecial = senha.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+      _tem8Caracteres = senha.length >= 8;
+    });
+  }
 
   Future<void> _criarConta() async {
     final nome = _nomeController.text.trim();
@@ -31,8 +57,11 @@ class _CadastroScreenState extends State<CadastroScreen> {
       return;
     }
 
-    if (senha.length < 6) {
-      setState(() => _erro = 'A senha deve ter pelo menos 6 caracteres.');
+    if (!_temMaiuscula || !_temNumero || !_temEspecial || !_tem8Caracteres) {
+      setState(() {
+        _erro =
+            'A senha deve conter letra maiúscula, número, caractere especial e mínimo de 8 caracteres.';
+      });
       return;
     }
 
@@ -41,31 +70,48 @@ class _CadastroScreenState extends State<CadastroScreen> {
       _erro = null;
     });
 
-    try {
-      // 1. Criar conta no Supabase Auth
-      final response = await supabase.auth.signUp(
-        email: email,
-        password: senha,
+    await Future.delayed(const Duration(seconds: 1));
+
+    TempAuth.cadastrar(
+      novoEmail: email,
+      novaSenha: senha,
+      novoNomeRestaurante: nome,
+      novoTelefone: telefone,
+      novoCnpj: cnpj.isEmpty ? null : cnpj,
+    );
+
+    if (mounted) {
+      setState(() => _carregando = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conta criada com sucesso! Agora faça login.'),
+          backgroundColor: Color(0xFFC2463C),
+        ),
       );
 
-      final user = response.user;
-      if (user == null) throw Exception('Erro ao criar conta.');
-
-      // 2. Salvar perfil na tabela perfis
-      await supabase.from('perfis').insert({
-        'id': user.id,
-        'nome_restaurante': nome,
-        'telefone': telefone,
-        'cnpj': cnpj.isEmpty ? null : cnpj,
-      });
-
-    } on AuthException catch (e) {
-      setState(() => _erro = e.message);
-    } catch (e) {
-      setState(() => _erro = e.toString());
-    } finally {
-      if (mounted) setState(() => _carregando = false);
+      Navigator.pop(context);
     }
+  }
+
+  Widget _requisito(String texto, bool valido) {
+    return Row(
+      children: [
+        Icon(
+          valido ? Icons.check_circle : Icons.cancel,
+          color: valido ? Colors.green : Colors.red,
+          size: 18,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          texto,
+          style: TextStyle(
+            fontSize: 12,
+            color: valido ? Colors.green : Colors.red,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -93,7 +139,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
               borderRadius: BorderRadius.circular(32),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
@@ -119,28 +164,70 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Campos
                 _label('Nome do restaurante *'),
                 _input('Ex: Restaurante do João', _nomeController),
+
                 const SizedBox(height: 12),
 
                 _label('Email *'),
-                _input('seu@email.com', _emailController),
+                _input(
+                  'seu@email.com',
+                  _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
                 const SizedBox(height: 12),
 
                 _label('Senha *'),
-                _input('Mínimo 6 caracteres', _senhaController, obscure: true),
+                _input(
+                  'Digite sua senha',
+                  _senhaController,
+                  obscure: !_mostrarSenha,
+                  onChanged: _validarSenha,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _mostrarSenha
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: Colors.black54,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _mostrarSenha = !_mostrarSenha;
+                      });
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                _requisito('Mínimo 8 caracteres', _tem8Caracteres),
+                _requisito('Uma letra maiúscula', _temMaiuscula),
+                _requisito('Um número', _temNumero),
+                _requisito('Um caractere especial', _temEspecial),
+
                 const SizedBox(height: 12),
 
                 _label('Telefone *'),
-                _input('(11) 99999-9999', _telefoneController),
+                _input(
+                  '(11) 99999-9999',
+                  _telefoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [_telefoneMask],
+                ),
+
                 const SizedBox(height: 12),
 
                 _label('CNPJ (opcional)'),
-                _input('00.000.000/0000-00', _cnpjController),
-                const SizedBox(height: 8),
+                _input(
+                  '00.000.000/0000-00',
+                  _cnpjController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [_cnpjMask],
+                ),
 
-                // Erro
+                const SizedBox(height: 12),
+
                 if (_erro != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -150,13 +237,11 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         fontSize: 12,
                         color: Colors.red,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
 
                 const SizedBox(height: 16),
 
-                // Botão criar conta
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFC2463C),
@@ -175,13 +260,14 @@ class _CadastroScreenState extends State<CadastroScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text('Criar conta',
-                          style: TextStyle(color: Colors.white)),
+                      : const Text(
+                          'Criar conta',
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
 
                 const SizedBox(height: 12),
 
-                // Voltar para login
                 Center(
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
@@ -199,7 +285,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -222,18 +307,31 @@ class _CadastroScreenState extends State<CadastroScreen> {
     );
   }
 
-  Widget _input(String hint, TextEditingController controller,
-      {bool obscure = false}) {
+  Widget _input(
+    String hint,
+    TextEditingController controller, {
+    bool obscure = false,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    Function(String)? onChanged,
+    Widget? suffixIcon,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontSize: 13),
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
