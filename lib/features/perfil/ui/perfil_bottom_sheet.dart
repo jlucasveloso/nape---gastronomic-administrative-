@@ -1,53 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:proj_nape/features/perfil/model/perfil.dart';
+import 'package:proj_nape/main.dart';
+import 'package:proj_nape/shared/temp_auth.dart';
 
-class PerfilBottomSheet extends StatefulWidget {
+class PerfilBottomSheet extends StatelessWidget {
   const PerfilBottomSheet({super.key});
 
-  @override
-  State<PerfilBottomSheet> createState() => _PerfilBottomSheetState();
-}
+  void _sair(BuildContext context) {
+    TempAuth.logout();
 
-class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
-  final supabase = Supabase.instance.client;
-  Perfil? _perfil;
-  bool _carregando = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _carregarPerfil();
-  }
-
-  Future<void> _carregarPerfil() async {
-    try {
-      final userId = supabase.auth.currentUser!.id;
-
-      final data = await supabase
-          .from('perfis')
-          .select()
-          .eq('id', userId)
-          .single();
-
-      setState(() {
-        _perfil = Perfil.fromMap(data);
-        _carregando = false;
-      });
-    } catch (e) {
-      setState(() => _carregando = false);
-    }
-  }
-
-  Future<void> _sair() async {
     Navigator.pop(context);
-    await supabase.auth.signOut();
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final email = supabase.auth.currentUser?.email ?? '';
-
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
@@ -64,7 +36,8 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
             height: 4,
             decoration: BoxDecoration(
               color: Colors.grey,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius:
+                  BorderRadius.circular(2),
             ),
           ),
 
@@ -74,7 +47,8 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: const Color(0xFFC2463C).withOpacity(0.1),
+              color: const Color(0xFFC2463C)
+                  .withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -86,56 +60,28 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
 
           const SizedBox(height: 16),
 
-          if (_carregando)
-            const CircularProgressIndicator(
-              color: Color(0xFFC2463C),
-            )
-          else ...[
-            if (_perfil != null)
-              Text(
-                _perfil!.nomeRestaurante,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-
-            const SizedBox(height: 4),
-
-            Text(
-              email,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black54,
-              ),
+          const Text(
+            'Usuário Local',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
+          ),
 
-            if (_perfil?.telefone != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                _perfil!.telefone,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
+          const SizedBox(height: 4),
 
-            if (_perfil?.cnpj != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'CNPJ: ${_perfil!.cnpj}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ],
+          const Text(
+            'Modo temporário',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+            ),
+          ),
 
           const SizedBox(height: 24),
+
           const Divider(),
+
           const SizedBox(height: 8),
 
           ListTile(
@@ -150,7 +96,7 @@ class _PerfilBottomSheetState extends State<PerfilBottomSheet> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            onTap: _sair,
+            onTap: () => _sair(context),
           ),
 
           const SizedBox(height: 8),

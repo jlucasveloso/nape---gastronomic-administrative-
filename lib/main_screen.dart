@@ -6,7 +6,7 @@ import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/cardapio_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 // Chave global para acessar o MainScreen de qualquer lugar
 final mainScreenKey = GlobalKey<MainScreenState>();
