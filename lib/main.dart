@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ── AuthGate — decide para onde ir ao abrir o app ────────────────────────────
+// ── AuthGate ─────────────────────────────────────────────────────────────────
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -55,11 +55,60 @@ class AuthGate extends StatelessWidget {
         if (snapshot.hasData) {
           final session = snapshot.data!.session;
           if (session != null) {
-return MainScreen(key: mainScreenKey);         
- }
+            final role =
+                supabase.auth.currentUser?.appMetadata['role'] ?? 'usuario';
+
+            if (role == 'admin') {
+              return const AdminScreen();
+            }
+
+            return MainScreen(key: mainScreenKey);
+          }
         }
         return const LoginScreen();
       },
+    );
+  }
+}
+
+// ── AdminScreen ───────────────────────────────────────────────────────────────
+class AdminScreen extends StatelessWidget {
+  const AdminScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            decoration: const BoxDecoration(
+              color: Color(0xFFC2463C),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+            ),
+            child: const Text(
+              'Painel Admin',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Em breve',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -79,72 +128,67 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _erro;
 
   Future<void> _entrar() async {
-  final email = _emailController.text.trim();
-  final senha = _senhaController.text.trim();
+    final email = _emailController.text.trim();
+    final senha = _senhaController.text.trim();
 
-  if (email.isEmpty || senha.isEmpty) {
-    setState(() => _erro = 'Preencha o email e a senha.');
-    return;
+    if (email.isEmpty || senha.isEmpty) {
+      setState(() => _erro = 'Preencha o email e a senha.');
+      return;
+    }
+
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: senha,
+      );
+    } on AuthException catch (e) {
+      setState(() => _erro = e.message);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
   }
-
-  setState(() {
-    _carregando = true;
-    _erro = null;
-  });
-
-  try {
-    await supabase.auth.signInWithPassword(
-      email: email,
-      password: senha,
-    );
-  } on AuthException catch (e) {
-    setState(() => _erro = e.message);
-  } finally {
-    if (mounted) setState(() => _carregando = false);
-  }
-}
 
   Future<void> _criarConta() async {
-  final email = _emailController.text.trim();
-  final senha = _senhaController.text.trim();
+    final email = _emailController.text.trim();
+    final senha = _senhaController.text.trim();
 
-  print('DEBUG email: $email');
-  print('DEBUG senha: $senha');
-
-  if (email.isEmpty || senha.isEmpty) {
-    setState(() => _erro = 'Preencha o email e a senha.');
-    return;
-  }
-
-  if (senha.length < 6) {
-    setState(() => _erro = 'A senha deve ter pelo menos 6 caracteres.');
-    return;
-  }
-
-  setState(() {
-    _carregando = true;
-    _erro = null;
-  });
-
-  try {
-    final response = await supabase.auth.signUp(
-      email: email,
-      password: senha,
-    );
-    print('DEBUG response: ${response.user}');
-    if (mounted) {
-      setState(() => _erro = 'Conta criada! Verifique seu email para confirmar.');
+    if (email.isEmpty || senha.isEmpty) {
+      setState(() => _erro = 'Preencha o email e a senha.');
+      return;
     }
-  } on AuthException catch (e) {
-    print('DEBUG AuthException: ${e.message}');
-    setState(() => _erro = e.message);
-  } catch (e) {
-    print('DEBUG erro generico: $e');
-    setState(() => _erro = e.toString());
-  } finally {
-    if (mounted) setState(() => _carregando = false);
+
+    if (senha.length < 6) {
+      setState(() => _erro = 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      final response = await supabase.auth.signUp(
+        email: email,
+        password: senha,
+      );
+      if (mounted) {
+        setState(() =>
+            _erro = 'Conta criada! Verifique seu email para confirmar.');
+      }
+    } on AuthException catch (e) {
+      setState(() => _erro = e.message);
+    } catch (e) {
+      setState(() => _erro = e.toString());
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
   }
-}
 
   @override
   void dispose() {
@@ -182,7 +226,6 @@ class _LoginScreenState extends State<LoginScreen> {
               _input('Senha', _senhaController, obscure: true),
               const SizedBox(height: 8),
 
-              // Mensagem de erro ou confirmação
               if (_erro != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -222,27 +265,27 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const CadastroScreen(),
-      ),
-    );
-  },
-  child: const Text.rich(
-    TextSpan(
-      text: 'Não tem conta? ',
-      style: TextStyle(color: Colors.black87),
-      children: [
-        TextSpan(
-          text: 'Criar conta',
-          style: TextStyle(color: Color(0xFFC2463C)),
-        ),
-      ],
-    ),
-  ),
-),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CadastroScreen(),
+                    ),
+                  );
+                },
+                child: const Text.rich(
+                  TextSpan(
+                    text: 'Não tem conta? ',
+                    style: TextStyle(color: Colors.black87),
+                    children: [
+                      TextSpan(
+                        text: 'Criar conta',
+                        style: TextStyle(color: Color(0xFFC2463C)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
             ],
           ),
