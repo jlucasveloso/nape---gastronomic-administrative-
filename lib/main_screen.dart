@@ -6,9 +6,8 @@ import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/cardapio_screen.dart';
+import 'package:proj_nape/features/dashboard/ui/analise_screen.dart';
 
-
-// Chave global para acessar o MainScreen de qualquer lugar
 final mainScreenKey = GlobalKey<MainScreenState>();
 
 class MainScreen extends StatefulWidget {
@@ -21,7 +20,6 @@ class MainScreen extends StatefulWidget {
 class MainScreenState extends State<MainScreen> {
   int _indiceAtivo = 0;
 
-  // Método público para trocar de aba
   void trocarAba(int indice) {
     setState(() => _indiceAtivo = indice);
   }
@@ -38,6 +36,7 @@ class MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().carregarDados();
     });
@@ -48,11 +47,15 @@ class MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: _telas[_indiceAtivo],
       bottomNavigationBar: BottomNavigationBar(
-currentIndex: _indiceAtivo == 4 ? 1 : _indiceAtivo == 5 ? 2 : 0,        onTap: (indice) {
-          // Mapear os 3 itens da nav para os índices reais
+        currentIndex: _indiceAtivo == 4
+            ? 1
+            : _indiceAtivo == 5
+                ? 2
+                : 0,
+        onTap: (indice) {
           if (indice == 0) trocarAba(0);
-          if (indice == 1) trocarAba(4); // Análise
-          if (indice == 2) trocarAba(5); // Cardápio
+          if (indice == 1) trocarAba(4);
+          if (indice == 2) trocarAba(5);
         },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFFC2463C),
@@ -63,9 +66,7 @@ currentIndex: _indiceAtivo == 4 ? 1 : _indiceAtivo == 5 ? 2 : 0,        onTap: (
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 11,
-        ),
+        unselectedLabelStyle: const TextStyle(fontSize: 11),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
@@ -81,49 +82,6 @@ currentIndex: _indiceAtivo == 4 ? 1 : _indiceAtivo == 5 ? 2 : 0,        onTap: (
             icon: Icon(Icons.restaurant_menu_outlined),
             activeIcon: Icon(Icons.restaurant_menu),
             label: 'Cardápio',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Análise placeholder ───────────────────────────────────────────────────────
-
-class AnaliseScreen extends StatelessWidget {
-  const AnaliseScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
-            decoration: const BoxDecoration(
-              color: Color(0xFFC2463C),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-            ),
-            child: const Text(
-              'Análise',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Em breve',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
           ),
         ],
       ),
