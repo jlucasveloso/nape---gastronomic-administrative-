@@ -5,10 +5,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:proj_nape/app_state.dart';
 import 'package:proj_nape/main_screen.dart';
 import 'package:proj_nape/features/perfil/ui/cadastro_screen.dart';
+import 'package:proj_nape/features/admin/ui/admin_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await initializeDateFormatting('pt_BR', null);
   await dotenv.load(fileName: '.env');
 
   await Supabase.initialize(
@@ -71,47 +73,6 @@ class AuthGate extends StatelessWidget {
   }
 }
 
-// ── AdminScreen ───────────────────────────────────────────────────────────────
-class AdminScreen extends StatelessWidget {
-  const AdminScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
-            decoration: const BoxDecoration(
-              color: Color(0xFFC2463C),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-            ),
-            child: const Text(
-              'Painel Admin',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Em breve',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── LoginScreen ───────────────────────────────────────────────────────────────
 class LoginScreen extends StatefulWidget {
