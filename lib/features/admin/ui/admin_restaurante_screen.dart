@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:proj_nape/features/perfil/model/perfil.dart';
+import 'package:proj_nape/features/admin/ui/abas/admin_resumo_aba.dart';
+import 'package:proj_nape/features/admin/ui/abas/admin_dados_aba.dart';
+import 'package:proj_nape/features/admin/ui/abas/admin_cardapio_aba.dart';
 
 class AdminRestauranteScreen extends StatefulWidget {
   final Perfil perfil;
@@ -17,21 +20,9 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
   @override
   Widget build(BuildContext context) {
     final telas = [
-      _AbaPlaceholder(
-        icone: Icons.dashboard_outlined,
-        titulo: 'Dashboard',
-        subtitulo: 'Em breve',
-      ),
-      _AbaPlaceholder(
-        icone: Icons.table_chart_outlined,
-        titulo: 'Análise',
-        subtitulo: 'Em breve',
-      ),
-      _AbaPlaceholder(
-        icone: Icons.restaurant_menu_outlined,
-        titulo: 'Cardápio',
-        subtitulo: 'Em breve',
-      ),
+      AdminResumoAba(userId: widget.perfil.id),
+      AdminDadosAba(userId: widget.perfil.id),
+      AdminCardapioAba(userId: widget.perfil.id),
     ];
 
     return Scaffold(
@@ -52,7 +43,6 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Botão voltar para lista de restaurantes
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Row(
@@ -117,65 +107,17 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             activeIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: 'Resumo',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.table_chart_outlined),
             activeIcon: Icon(Icons.table_chart),
-            label: 'Análise',
+            label: 'Dados',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.restaurant_menu_outlined),
             activeIcon: Icon(Icons.restaurant_menu),
             label: 'Cardápio',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Placeholder ───────────────────────────────────────────────────────────────
-
-class _AbaPlaceholder extends StatelessWidget {
-  final IconData icone;
-  final String titulo;
-  final String subtitulo;
-
-  const _AbaPlaceholder({
-    required this.icone,
-    required this.titulo,
-    required this.subtitulo,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFFC2463C).withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icone, size: 36, color: const Color(0xFFC2463C)),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            titulo,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitulo,
-            style: const TextStyle(fontSize: 13, color: Colors.black38),
           ),
         ],
       ),
