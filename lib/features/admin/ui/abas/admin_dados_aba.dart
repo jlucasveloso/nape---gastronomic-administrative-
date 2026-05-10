@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import 'package:proj_nape/features/admin/ui/abas/widgets/admin_cards_resumo.dart';
+import 'package:proj_nape/features/admin/ui/abas/widgets/admin_grafico_barras.dart';
+import 'package:proj_nape/features/admin/ui/abas/widgets/admin_tabela_despesas.dart';
+import 'package:proj_nape/features/admin/ui/abas/widgets/admin_tabela_vendas.dart';
 import 'package:proj_nape/features/dashboard/controller/dashboard_controller.dart';
 import 'package:proj_nape/features/dashboard/model/despesa.dart';
+import 'package:proj_nape/features/dashboard/model/produto_cardapio.dart';
 import 'package:proj_nape/features/dashboard/model/venda.dart';
+import 'package:proj_nape/repositories/cardapio_repository.dart';
 import 'package:proj_nape/repositories/despesa_repository.dart';
 import 'package:proj_nape/repositories/venda_repository.dart';
-import 'package:intl/intl.dart';
 
 enum _Periodo { hoje, ontem, semana, mes, custom }
 
@@ -35,16 +40,23 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
   late TabController _tabController;
   final _vendaRepo = VendaRepository();
   final _despesaRepo = DespesaRepository();
+  final _cardapioRepo = CardapioRepository();
 
   List<Venda> _vendas = [];
   List<Despesa> _despesas = [];
+  List<ProdutoCardapio> _cardapio = [];
   bool _carregando = true;
   bool _tabelaVisivel = false;
 
+  // Filtros
   _Periodo _periodoSelecionado = _Periodo.mes;
   DateTimeRange? _periodoCustom;
   String _busca = '';
   String _categoriaSelecionada = 'Todas';
+  double? _valorMin;
+  double? _valorMax;
+
+  // Paginação
   int _paginaAtual = 0;
   final int _itensPorPagina = 50;
 
@@ -55,6 +67,8 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
     _tabController.addListener(() => setState(() {
           _busca = '';
           _categoriaSelecionada = 'Todas';
+          _valorMin = null;
+          _valorMax = null;
           _paginaAtual = 0;
         }));
     _carregarDados();
@@ -69,17 +83,24 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
   Future<void> _carregarDados() async {
     setState(() => _carregando = true);
     try {
-      final vendas = await _vendaRepo.buscarVendas(userId: widget.userId);
-      final despesas = await _despesaRepo.buscarDespesas(userId: widget.userId);
+      final results = await Future.wait([
+        _vendaRepo.buscarVendas(userId: widget.userId),
+        _despesaRepo.buscarDespesas(userId: widget.userId),
+        _cardapioRepo.buscarProdutos(userId: widget.userId),
+      ]);
       setState(() {
-        _vendas = vendas;
-        _despesas = despesas;
+        _vendas = results[0] as List<Venda>;
+        _despesas = results[1] as List<Despesa>;
+        _cardapio = results[2] as List<ProdutoCardapio>;
         _carregando = false;
       });
     } catch (e) {
       setState(() => _carregando = false);
+      debugPrint('Erro ao carregar dados: $e');
     }
   }
+
+  // ── Período ────────────────────────────────────────────────────────────────
 
   DateTimeRange get _intervalo {
     final agora = DateTime.now();
@@ -119,7 +140,8 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
   }
 
   Future<void> _abrirSeletorPeriodo() async {
-    final opcoes = _Periodo.values.where((p) => p != _Periodo.custom).toList();
+    final opcoes =
+        _Periodo.values.where((p) => p != _Periodo.custom).toList();
 
     final resultado = await showModalBottomSheet<_Periodo>(
       context: context,
@@ -198,7 +220,10 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
     );
 
     if (resultado != null) {
-      setState(() => _periodoSelecionado = resultado);
+      setState(() {
+        _periodoSelecionado = resultado;
+        _paginaAtual = 0;
+      });
     }
   }
 
@@ -223,9 +248,12 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
       setState(() {
         _periodoCustom = picked;
         _periodoSelecionado = _Periodo.custom;
+        _paginaAtual = 0;
       });
     }
   }
+
+  // ── Filtros ────────────────────────────────────────────────────────────────
 
   List<Venda> get _vendasFiltradas {
     final intervalo = _intervalo;
@@ -233,11 +261,19 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
       final periodoOk = !v.data.isBefore(intervalo.start) &&
           !v.data.isAfter(intervalo.end);
       final buscaOk = _busca.isEmpty ||
-          v.nomeProdutoSnapshot.toLowerCase().contains(_busca.toLowerCase()) ||
-          v.categoriaSnapshot.toLowerCase().contains(_busca.toLowerCase());
+          v.nomeProdutoSnapshot
+              .toLowerCase()
+              .contains(_busca.toLowerCase()) ||
+          v.categoriaSnapshot
+              .toLowerCase()
+              .contains(_busca.toLowerCase());
       final categoriaOk = _categoriaSelecionada == 'Todas' ||
           v.categoriaSnapshot == _categoriaSelecionada;
-      return periodoOk && buscaOk && categoriaOk;
+      final valorMinOk =
+          _valorMin == null || v.valorTotal >= _valorMin!;
+      final valorMaxOk =
+          _valorMax == null || v.valorTotal <= _valorMax!;
+      return periodoOk && buscaOk && categoriaOk && valorMinOk && valorMaxOk;
     }).toList();
   }
 
@@ -251,13 +287,18 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
           d.categoria.toLowerCase().contains(_busca.toLowerCase());
       final categoriaOk = _categoriaSelecionada == 'Todas' ||
           d.categoria == _categoriaSelecionada;
-      return periodoOk && buscaOk && categoriaOk;
+      final valorMinOk = _valorMin == null || d.valor >= _valorMin!;
+      final valorMaxOk = _valorMax == null || d.valor <= _valorMax!;
+      return periodoOk && buscaOk && categoriaOk && valorMinOk && valorMaxOk;
     }).toList();
   }
 
   List<String> get _categoriasVendas => [
         'Todas',
-        ..._vendasFiltradas.map((v) => v.categoriaSnapshot).toSet().toList()
+        ..._vendasFiltradas
+            .map((v) => v.categoriaSnapshot)
+            .toSet()
+            .toList()
       ];
 
   List<String> get _categoriasDespesas => [
@@ -272,12 +313,14 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
     return lista.sublist(inicio, fim);
   }
 
+  // ── Gráfico ────────────────────────────────────────────────────────────────
+
   Map<DateTime, double> _agruparPorDia(
       List<Venda> vendas, List<Despesa> despesas, String tipo) {
     final Map<DateTime, double> resultado = {};
     final intervalo = _intervalo;
-    var atual = DateTime(
-        intervalo.start.year, intervalo.start.month, intervalo.start.day);
+    var atual = DateTime(intervalo.start.year, intervalo.start.month,
+        intervalo.start.day);
     final fim = DateTime(
         intervalo.end.year, intervalo.end.month, intervalo.end.day);
 
@@ -307,33 +350,171 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
     return resultado;
   }
 
+  // ── Filtro de valor ────────────────────────────────────────────────────────
+
+  void _abrirFiltroValor() {
+    final minController =
+        TextEditingController(text: _valorMin?.toStringAsFixed(0) ?? '');
+    final maxController =
+        TextEditingController(text: _valorMax?.toStringAsFixed(0) ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Filtrar por valor',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: minController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Valor mínimo',
+                      prefixText: 'R\$ ',
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: Color(0xFFC2463C)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: maxController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Valor máximo',
+                      prefixText: 'R\$ ',
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: Color(0xFFC2463C)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _valorMin = null;
+                        _valorMax = null;
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black54,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Limpar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _valorMin = double.tryParse(
+                            minController.text.replaceAll(',', '.'));
+                        _valorMax = double.tryParse(
+                            maxController.text.replaceAll(',', '.'));
+                        _paginaAtual = 0;
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFC2463C),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Aplicar',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final fmtData = DateFormat('dd/MM/yy', 'pt_BR');
-    final fmtDia = DateFormat('dd/MM', 'pt_BR');
 
     final isVendas = _tabController.index == 0;
     final vendasFiltradas = _vendasFiltradas;
     final despesasFiltradas = _despesasFiltradas;
-    final listaFiltrada = isVendas ? vendasFiltradas : despesasFiltradas;
+    final listaFiltrada =
+        isVendas ? vendasFiltradas : despesasFiltradas;
 
     final controller = DashboardController(
       vendas: vendasFiltradas,
       despesas: despesasFiltradas,
     );
 
-    final dadosFat = _agruparPorDia(vendasFiltradas, despesasFiltradas, 'faturamento');
-    final dadosCus = _agruparPorDia(vendasFiltradas, despesasFiltradas, 'custos');
-    final dadosLuc = _agruparPorDia(vendasFiltradas, despesasFiltradas, 'lucro');
+    final dadosFat =
+        _agruparPorDia(vendasFiltradas, despesasFiltradas, 'faturamento');
+    final dadosCus =
+        _agruparPorDia(vendasFiltradas, despesasFiltradas, 'custos');
+    final dadosLuc =
+        _agruparPorDia(vendasFiltradas, despesasFiltradas, 'lucro');
     final dias = dadosFat.keys.toList()..sort();
+
+    final temFiltroValor = _valorMin != null || _valorMax != null;
 
     return _carregando
         ? const Center(
             child: CircularProgressIndicator(color: Color(0xFFC2463C)))
         : ListView(
             children: [
-              // ── Seletor de período ─────────────────────────────────────
+              // ── Seletor de período ───────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: GestureDetector(
@@ -371,166 +552,28 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
 
               const SizedBox(height: 16),
 
-              // ── Cards resumo ───────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _CardResumo(
-                      titulo: 'Faturamento',
-                      valor: fmt.format(controller.faturamentoTotal),
-                      cor: const Color(0xFF2D74C4),
-                    ),
-                    const SizedBox(width: 8),
-                    _CardResumo(
-                      titulo: 'Custos',
-                      valor: fmt.format(controller.custosTotal),
-                      cor: const Color(0xFFC2463C),
-                    ),
-                    const SizedBox(width: 8),
-                    _CardResumo(
-                      titulo: controller.lucro >= 0 ? 'Lucro' : 'Prejuízo',
-                      valor: fmt.format(controller.lucro.abs()),
-                      cor: controller.lucro >= 0
-                          ? const Color(0xFF3E8E41)
-                          : const Color(0xFFC2463C),
-                    ),
-                  ],
-                ),
+              // ── Cards resumo ─────────────────────────────────────────────
+              AdminCardsResumo(
+                faturamento: fmt.format(controller.faturamentoTotal),
+                custos: fmt.format(controller.custosTotal),
+                lucro: fmt.format(controller.lucro.abs()),
+                emPrejuizo: controller.lucro < 0,
               ),
 
               const SizedBox(height: 16),
 
-              // ── Gráfico ────────────────────────────────────────────────
+              // ── Gráfico ──────────────────────────────────────────────────
               if (dias.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _Legenda(cor: const Color(0xFF2D74C4), label: 'Faturamento'),
-                          const SizedBox(width: 12),
-                          _Legenda(cor: const Color(0xFFC2463C), label: 'Custos'),
-                          const SizedBox(width: 12),
-                          _Legenda(cor: const Color(0xFF3E8E41), label: 'Lucro'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 180,
-                        child: BarChart(
-                          BarChartData(
-                            gridData: FlGridData(
-                              show: true,
-                              drawVerticalLine: false,
-                              getDrawingHorizontalLine: (value) => FlLine(
-                                color: Colors.grey.shade100,
-                                strokeWidth: 1,
-                              ),
-                            ),
-                            titlesData: FlTitlesData(
-                              leftTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 22,
-                                  getTitlesWidget: (value, meta) {
-                                    final idx = value.toInt();
-                                    if (idx < 0 || idx >= dias.length) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    final intervalo = dias.length <= 7
-                                        ? 1
-                                        : (dias.length / 5).ceil();
-                                    if (idx % intervalo != 0) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Text(
-                                      fmtDia.format(dias[idx]),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.black38,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            barGroups: dias.asMap().entries.map((e) {
-                              final idx = e.key;
-                              final dia = e.value;
-                              final fat = dadosFat[dia] ?? 0;
-                              final cus = dadosCus[dia] ?? 0;
-                              final luc = dadosLuc[dia] ?? 0;
-                              final diasComDados = dias.where((d) =>
-    (dadosFat[d] ?? 0) > 0 ||
-    (dadosCus[d] ?? 0) > 0).length;
-final barWidth = diasComDados <= 3
-    ? 16.0
-    : diasComDados <= 7
-        ? 10.0
-        : dias.length <= 7
-            ? 8.0
-            : 4.0;
-
-                              return BarChartGroupData(
-                                x: idx,
-                                barRods: [
-                                  BarChartRodData(
-                                    toY: fat,
-                                    color: const Color(0xFF2D74C4),
-                                    width: barWidth,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  BarChartRodData(
-                                    toY: cus,
-                                    color: const Color(0xFFC2463C),
-                                    width: barWidth,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  BarChartRodData(
-                                    toY: luc < 0 ? 0 : luc,
-                                    color: const Color(0xFF3E8E41),
-                                    width: barWidth,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ],
-                                barsSpace: 2,
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                AdminGraficoBarras(
+                  dadosFat: dadosFat,
+                  dadosCus: dadosCus,
+                  dadosLuc: dadosLuc,
+                  dias: dias,
                 ),
 
               const SizedBox(height: 16),
 
-              // ── Ver/Ocultar detalhes ───────────────────────────────────
+              // ── Ver/Ocultar detalhes ─────────────────────────────────────
               Center(
                 child: GestureDetector(
                   onTap: () =>
@@ -547,7 +590,9 @@ final barWidth = diasComDados <= 3
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _tabelaVisivel ? 'Ocultar detalhes' : 'Ver detalhes',
+                          _tabelaVisivel
+                              ? 'Ocultar detalhes'
+                              : 'Ver detalhes',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -568,10 +613,11 @@ final barWidth = diasComDados <= 3
                 ),
               ),
 
-              // ── Tabela ─────────────────────────────────────────────────
+              // ── Tabela ───────────────────────────────────────────────────
               if (_tabelaVisivel) ...[
                 const SizedBox(height: 16),
 
+                // Sub-abas
                 Container(
                   color: Colors.white,
                   child: TabBar(
@@ -590,33 +636,64 @@ final barWidth = diasComDados <= 3
                   ),
                 ),
 
+                // Filtros
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   color: const Color(0xFFE9E4DF),
                   child: Column(
                     children: [
-                      TextField(
-                        onChanged: (v) => setState(() {
-                          _busca = v;
-                          _paginaAtual = 0;
-                        }),
-                        decoration: InputDecoration(
-                          hintText: 'Buscar...',
-                          hintStyle: const TextStyle(
-                              fontSize: 13, color: Colors.black38),
-                          prefixIcon: const Icon(Icons.search,
-                              size: 18, color: Colors.black38),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 0),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                      // Busca + filtro valor
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              onChanged: (v) => setState(() {
+                                _busca = v;
+                                _paginaAtual = 0;
+                              }),
+                              decoration: InputDecoration(
+                                hintText: 'Buscar...',
+                                hintStyle: const TextStyle(
+                                    fontSize: 13, color: Colors.black38),
+                                prefixIcon: const Icon(Icons.search,
+                                    size: 18, color: Colors.black38),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 0),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          // Botão filtro valor
+                          GestureDetector(
+                            onTap: _abrirFiltroValor,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: temFiltroValor
+                                    ? const Color(0xFFC2463C)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.filter_list,
+                                size: 20,
+                                color: temFiltroValor
+                                    ? Colors.white
+                                    : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
+
+                      // Filtro categoria
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -639,7 +716,8 @@ final barWidth = diasComDados <= 3
                                     color: sel
                                         ? const Color(0xFFC2463C)
                                         : Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius:
+                                        BorderRadius.circular(20),
                                     border: Border.all(
                                       color: sel
                                           ? const Color(0xFFC2463C)
@@ -666,6 +744,7 @@ final barWidth = diasComDados <= 3
                   ),
                 ),
 
+                // Total
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -683,67 +762,38 @@ final barWidth = diasComDados <= 3
                   ),
                 ),
 
-                Container(
-                  color: Colors.grey.shade100,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      _th('Data', 65),
-                      const SizedBox(width: 8),
-                      Expanded(
-                          child: _th(
-                              isVendas ? 'Produto' : 'Descrição', null)),
-                      const SizedBox(width: 8),
-                      _th('Categ.', 70),
-                      if (isVendas) ...[
-                        const SizedBox(width: 8),
-                        _th('Qtd', 30),
-                      ],
-                      const SizedBox(width: 8),
-                      _th('Total', 65),
-                      const SizedBox(width: 32),
-                    ],
-                  ),
-                ),
-
-                if (listaFiltrada.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(
-                      child: Text(
-                        'Nenhum registro encontrado',
-                        style: TextStyle(color: Colors.black38),
-                      ),
-                    ),
+                // Tabela
+                if (isVendas)
+                  AdminTabelaVendas(
+                    vendas: _paginar(vendasFiltradas),
+                    cardapio: _cardapio,
+                    fmt: fmt,
+                    fmtData: fmtData,
+                    onEditar: (vendaAtualizada) async {
+                      await _vendaRepo.atualizarVenda(vendaAtualizada);
+                      await _carregarDados();
+                    },
+                    onDeletar: (id) async {
+                      await _vendaRepo.deletarVenda(id);
+                      await _carregarDados();
+                    },
                   )
                 else
-                  ...(_paginar(listaFiltrada).map((item) {
-                    if (isVendas) {
-                      final v = item as Venda;
-                      return _LinhaVenda(
-                        venda: v,
-                        fmt: fmt,
-                        fmtData: fmtData,
-                        onDeletar: () async {
-                          await _vendaRepo.deletarVenda(v.id);
-                          _carregarDados();
-                        },
-                      );
-                    } else {
-                      final d = item as Despesa;
-                      return _LinhaDespesa(
-                        despesa: d,
-                        fmt: fmt,
-                        fmtData: fmtData,
-                        onDeletar: () async {
-                          await _despesaRepo.deletarDespesa(d.id);
-                          _carregarDados();
-                        },
-                      );
-                    }
-                  })),
+                  AdminTabelaDespesas(
+                    despesas: _paginar(despesasFiltradas),
+                    fmt: fmt,
+                    fmtData: fmtData,
+                    onEditar: (despesaAtualizada) async {
+                      await _despesaRepo.atualizarDespesa(despesaAtualizada);
+                      await _carregarDados();
+                    },
+                    onDeletar: (id) async {
+                      await _despesaRepo.deletarDespesa(id);
+                      await _carregarDados();
+                    },
+                  ),
 
+                // Paginação
                 if ((listaFiltrada.length / _itensPorPagina).ceil() > 1)
                   Container(
                     color: Colors.white,
@@ -760,7 +810,8 @@ final barWidth = diasComDados <= 3
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back_ios, size: 16),
+                              icon: const Icon(Icons.arrow_back_ios,
+                                  size: 16),
                               onPressed: _paginaAtual > 0
                                   ? () => setState(() => _paginaAtual--)
                                   : null,
@@ -771,10 +822,11 @@ final barWidth = diasComDados <= 3
                               style: const TextStyle(fontSize: 12),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                              icon: const Icon(Icons.arrow_forward_ios,
+                                  size: 16),
                               onPressed: _paginaAtual < (listaFiltrada.length / _itensPorPagina).ceil() - 1
-    ? () => setState(() => _paginaAtual++)
-    : null,
+                                  ? () => setState(() => _paginaAtual++)
+                                  : null,
                               color: const Color(0xFFC2463C),
                             ),
                           ],
@@ -783,6 +835,7 @@ final barWidth = diasComDados <= 3
                     ),
                   ),
 
+                // Botões ações
                 Container(
                   padding: const EdgeInsets.all(16),
                   color: Colors.white,
@@ -796,7 +849,9 @@ final barWidth = diasComDados <= 3
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            // TODO: modal adicionar
+                          },
                           icon: const Icon(Icons.add,
                               size: 18, color: Colors.white),
                           label: const Text('Adicionar',
@@ -813,7 +868,9 @@ final barWidth = diasComDados <= 3
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            // TODO: exportar CSV
+                          },
                           icon: const Icon(Icons.download, size: 18),
                           label: const Text('Exportar CSV'),
                         ),
@@ -826,342 +883,5 @@ final barWidth = diasComDados <= 3
               ],
             ],
           );
-  }
-
-  Widget _th(String texto, double? largura) {
-    return largura != null
-        ? SizedBox(
-            width: largura,
-            child: Text(texto,
-                style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black45)),
-          )
-        : Text(texto,
-            style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.black45));
-  }
-}
-
-// ── Card Resumo ───────────────────────────────────────────────────────────────
-
-class _CardResumo extends StatelessWidget {
-  final String titulo;
-  final String valor;
-  final Color cor;
-
-  const _CardResumo({
-    required this.titulo,
-    required this.valor,
-    required this.cor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              titulo,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.black38,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              valor,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: cor,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Legenda ───────────────────────────────────────────────────────────────────
-
-class _Legenda extends StatelessWidget {
-  final Color cor;
-  final String label;
-
-  const _Legenda({required this.cor, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 3,
-          decoration: BoxDecoration(
-            color: cor,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: Colors.black54),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Linha Venda ───────────────────────────────────────────────────────────────
-
-class _LinhaVenda extends StatelessWidget {
-  final Venda venda;
-  final NumberFormat fmt;
-  final DateFormat fmtData;
-  final VoidCallback onDeletar;
-
-  const _LinhaVenda({
-    required this.venda,
-    required this.fmt,
-    required this.fmtData,
-    required this.onDeletar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 65,
-            child: Text(fmtData.format(venda.data),
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              venda.nomeProdutoSnapshot,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 70,
-            child: Text(venda.categoriaSnapshot,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
-                overflow: TextOverflow.ellipsis),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 30,
-            child: Text('${venda.quantidade}x',
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 65,
-            child: Text(
-              fmt.format(venda.valorTotal),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D74C4),
-              ),
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 18, color: Colors.black38),
-            onSelected: (value) {
-              if (value == 'deletar') _confirmarDelecao(context);
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'editar',
-                child: Row(children: [
-                  Icon(Icons.edit_outlined, size: 16, color: Colors.black54),
-                  SizedBox(width: 8),
-                  Text('Editar', style: TextStyle(fontSize: 13)),
-                ]),
-              ),
-              const PopupMenuItem(
-                value: 'deletar',
-                child: Row(children: [
-                  Icon(Icons.delete_outline, size: 16, color: Color(0xFFC2463C)),
-                  SizedBox(width: 8),
-                  Text('Deletar',
-                      style: TextStyle(fontSize: 13, color: Color(0xFFC2463C))),
-                ]),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmarDelecao(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Deletar venda'),
-        content: Text(
-            'Deseja deletar a venda de "${venda.nomeProdutoSnapshot}"?\nEsta ação não pode ser desfeita.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: Colors.black54))),
-          TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                onDeletar();
-              },
-              child: const Text('Deletar',
-                  style: TextStyle(color: Color(0xFFC2463C)))),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Linha Despesa ─────────────────────────────────────────────────────────────
-
-class _LinhaDespesa extends StatelessWidget {
-  final Despesa despesa;
-  final NumberFormat fmt;
-  final DateFormat fmtData;
-  final VoidCallback onDeletar;
-
-  const _LinhaDespesa({
-    required this.despesa,
-    required this.fmt,
-    required this.fmtData,
-    required this.onDeletar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 65,
-            child: Text(fmtData.format(despesa.data),
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              despesa.descricao,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 70,
-            child: Text(despesa.categoria,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
-                overflow: TextOverflow.ellipsis),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 65,
-            child: Text(
-              fmt.format(despesa.valor),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFC2463C),
-              ),
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 18, color: Colors.black38),
-            onSelected: (value) {
-              if (value == 'deletar') _confirmarDelecao(context);
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'editar',
-                child: Row(children: [
-                  Icon(Icons.edit_outlined, size: 16, color: Colors.black54),
-                  SizedBox(width: 8),
-                  Text('Editar', style: TextStyle(fontSize: 13)),
-                ]),
-              ),
-              const PopupMenuItem(
-                value: 'deletar',
-                child: Row(children: [
-                  Icon(Icons.delete_outline, size: 16, color: Color(0xFFC2463C)),
-                  SizedBox(width: 8),
-                  Text('Deletar',
-                      style: TextStyle(fontSize: 13, color: Color(0xFFC2463C))),
-                ]),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmarDelecao(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Deletar despesa'),
-        content: Text(
-            'Deseja deletar "${despesa.descricao}"?\nEsta ação não pode ser desfeita.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: Colors.black54))),
-          TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                onDeletar();
-              },
-              child: const Text('Deletar',
-                  style: TextStyle(color: Color(0xFFC2463C)))),
-        ],
-      ),
-    );
   }
 }
