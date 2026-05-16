@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:proj_nape/features/admin/ui/abas/widgets/admin_cards_resumo.dart';
-import 'package:proj_nape/features/admin/ui/abas/widgets/admin_grafico_barras.dart';
 import 'package:proj_nape/features/admin/ui/abas/widgets/admin_tabela_despesas.dart';
 import 'package:proj_nape/features/admin/ui/abas/widgets/admin_tabela_vendas.dart';
-import 'package:proj_nape/features/dashboard/controller/dashboard_controller.dart';
 import 'package:proj_nape/features/dashboard/model/despesa.dart';
 import 'package:proj_nape/features/dashboard/model/produto_cardapio.dart';
 import 'package:proj_nape/features/dashboard/model/venda.dart';
@@ -28,7 +25,6 @@ extension _PeriodoLabel on _Periodo {
 
 class AdminDadosAba extends StatefulWidget {
   final String userId;
-
   const AdminDadosAba({super.key, required this.userId});
 
   @override
@@ -46,19 +42,16 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
   List<Despesa> _despesas = [];
   List<ProdutoCardapio> _cardapio = [];
   bool _carregando = true;
-  bool _tabelaVisivel = false;
+  bool _resumoVisivel = false;
 
-  // Filtros
   _Periodo _periodoSelecionado = _Periodo.mes;
   DateTimeRange? _periodoCustom;
   String _busca = '';
   String _categoriaSelecionada = 'Todas';
   double? _valorMin;
   double? _valorMax;
-
-  // Paginação
   int _paginaAtual = 0;
-  final int _itensPorPagina = 50;
+  int _itensPorPagina = 20;
 
   @override
   void initState() {
@@ -96,11 +89,8 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
       });
     } catch (e) {
       setState(() => _carregando = false);
-      debugPrint('Erro ao carregar dados: $e');
     }
   }
-
-  // ── Período ────────────────────────────────────────────────────────────────
 
   DateTimeRange get _intervalo {
     final agora = DateTime.now();
@@ -140,9 +130,7 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
   }
 
   Future<void> _abrirSeletorPeriodo() async {
-    final opcoes =
-        _Periodo.values.where((p) => p != _Periodo.custom).toList();
-
+    final opcoes = _Periodo.values.where((p) => p != _Periodo.custom).toList();
     final resultado = await showModalBottomSheet<_Periodo>(
       context: context,
       backgroundColor: Colors.white,
@@ -155,59 +143,44 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
           children: [
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 36,
-              height: 4,
+              width: 36, height: 4,
               decoration: BoxDecoration(
                 color: Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             ...opcoes.map((p) => ListTile(
-                  leading: Icon(
-                    Icons.check,
-                    color: _periodoSelecionado == p
-                        ? const Color(0xFFC2463C)
-                        : Colors.transparent,
-                    size: 18,
-                  ),
-                  title: Text(
-                    p.label,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: _periodoSelecionado == p
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: _periodoSelecionado == p
-                          ? const Color(0xFFC2463C)
-                          : Colors.black87,
-                    ),
-                  ),
-                  onTap: () => Navigator.pop(context, p),
+              dense: true,
+              leading: Icon(Icons.check,
+                color: _periodoSelecionado == p
+                    ? const Color(0xFFC2463C) : Colors.transparent,
+                size: 16),
+              title: Text(p.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: _periodoSelecionado == p
+                      ? FontWeight.w600 : FontWeight.normal,
+                  color: _periodoSelecionado == p
+                      ? const Color(0xFFC2463C) : Colors.black87,
                 )),
+              onTap: () => Navigator.pop(context, p),
+            )),
             ListTile(
+              dense: true,
               leading: Icon(
                 _periodoSelecionado == _Periodo.custom
-                    ? Icons.check
-                    : Icons.calendar_month_outlined,
+                    ? Icons.check : Icons.calendar_month_outlined,
                 color: _periodoSelecionado == _Periodo.custom
-                    ? const Color(0xFFC2463C)
-                    : Colors.black54,
-                size: 18,
-              ),
-              title: Text(
-                _periodoSelecionado == _Periodo.custom
-                    ? _labelPeriodo
-                    : 'Personalizado',
+                    ? const Color(0xFFC2463C) : Colors.black54,
+                size: 16),
+              title: Text('Personalizado',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: _periodoSelecionado == _Periodo.custom
-                      ? FontWeight.w600
-                      : FontWeight.normal,
+                      ? FontWeight.w600 : FontWeight.normal,
                   color: _periodoSelecionado == _Periodo.custom
-                      ? const Color(0xFFC2463C)
-                      : Colors.black87,
-                ),
-              ),
+                      ? const Color(0xFFC2463C) : Colors.black87,
+                )),
               onTap: () {
                 Navigator.pop(context);
                 _abrirCalendario();
@@ -218,7 +191,6 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
         ),
       ),
     );
-
     if (resultado != null) {
       setState(() {
         _periodoSelecionado = resultado;
@@ -253,26 +225,18 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
     }
   }
 
-  // ── Filtros ────────────────────────────────────────────────────────────────
-
   List<Venda> get _vendasFiltradas {
     final intervalo = _intervalo;
     return _vendas.where((v) {
       final periodoOk = !v.data.isBefore(intervalo.start) &&
           !v.data.isAfter(intervalo.end);
       final buscaOk = _busca.isEmpty ||
-          v.nomeProdutoSnapshot
-              .toLowerCase()
-              .contains(_busca.toLowerCase()) ||
-          v.categoriaSnapshot
-              .toLowerCase()
-              .contains(_busca.toLowerCase());
+          v.nomeProdutoSnapshot.toLowerCase().contains(_busca.toLowerCase()) ||
+          v.categoriaSnapshot.toLowerCase().contains(_busca.toLowerCase());
       final categoriaOk = _categoriaSelecionada == 'Todas' ||
           v.categoriaSnapshot == _categoriaSelecionada;
-      final valorMinOk =
-          _valorMin == null || v.valorTotal >= _valorMin!;
-      final valorMaxOk =
-          _valorMax == null || v.valorTotal <= _valorMax!;
+      final valorMinOk = _valorMin == null || v.valorTotal >= _valorMin!;
+      final valorMaxOk = _valorMax == null || v.valorTotal <= _valorMax!;
       return periodoOk && buscaOk && categoriaOk && valorMinOk && valorMaxOk;
     }).toList();
   }
@@ -295,10 +259,7 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
 
   List<String> get _categoriasVendas => [
         'Todas',
-        ..._vendasFiltradas
-            .map((v) => v.categoriaSnapshot)
-            .toSet()
-            .toList()
+        ..._vendasFiltradas.map((v) => v.categoriaSnapshot).toSet().toList()
       ];
 
   List<String> get _categoriasDespesas => [
@@ -313,50 +274,11 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
     return lista.sublist(inicio, fim);
   }
 
-  // ── Gráfico ────────────────────────────────────────────────────────────────
-
-  Map<DateTime, double> _agruparPorDia(
-      List<Venda> vendas, List<Despesa> despesas, String tipo) {
-    final Map<DateTime, double> resultado = {};
-    final intervalo = _intervalo;
-    var atual = DateTime(intervalo.start.year, intervalo.start.month,
-        intervalo.start.day);
-    final fim = DateTime(
-        intervalo.end.year, intervalo.end.month, intervalo.end.day);
-
-    while (!atual.isAfter(fim)) {
-      resultado[atual] = 0;
-      atual = atual.add(const Duration(days: 1));
-    }
-
-    if (tipo == 'faturamento') {
-      for (final v in vendas) {
-        final dia = DateTime(v.data.year, v.data.month, v.data.day);
-        resultado[dia] = (resultado[dia] ?? 0) + v.valorTotal;
-      }
-    } else if (tipo == 'custos') {
-      for (final d in despesas) {
-        final dia = DateTime(d.data.year, d.data.month, d.data.day);
-        resultado[dia] = (resultado[dia] ?? 0) + d.valor;
-      }
-    } else {
-      final fat = _agruparPorDia(vendas, despesas, 'faturamento');
-      final cus = _agruparPorDia(vendas, despesas, 'custos');
-      for (final dia in fat.keys) {
-        resultado[dia] = (fat[dia] ?? 0) - (cus[dia] ?? 0);
-      }
-    }
-
-    return resultado;
-  }
-
-  // ── Filtro de valor ────────────────────────────────────────────────────────
-
   void _abrirFiltroValor() {
-    final minController =
-        TextEditingController(text: _valorMin?.toStringAsFixed(0) ?? '');
-    final maxController =
-        TextEditingController(text: _valorMax?.toStringAsFixed(0) ?? '');
+    final minController = TextEditingController(
+        text: _valorMin?.toStringAsFixed(0) ?? '');
+    final maxController = TextEditingController(
+        text: _valorMax?.toStringAsFixed(0) ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -366,42 +288,29 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
       ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
+          left: 24, right: 24, top: 24,
           bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Filtrar por valor',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('Filtrar por valor',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: minController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: 'Valor mínimo',
-                      prefixText: 'R\$ ',
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      labelText: 'Mínimo', prefixText: 'R\$ ',
+                      filled: true, fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: Color(0xFFC2463C)),
+                        borderSide: const BorderSide(color: Color(0xFFC2463C)),
                       ),
                     ),
                   ),
@@ -410,20 +319,14 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                 Expanded(
                   child: TextField(
                     controller: maxController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: 'Valor máximo',
-                      prefixText: 'R\$ ',
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      labelText: 'Máximo', prefixText: 'R\$ ',
+                      filled: true, fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: Color(0xFFC2463C)),
+                        borderSide: const BorderSide(color: Color(0xFFC2463C)),
                       ),
                     ),
                   ),
@@ -436,18 +339,13 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      setState(() {
-                        _valorMin = null;
-                        _valorMax = null;
-                      });
+                      setState(() { _valorMin = null; _valorMax = null; });
                       Navigator.pop(context);
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.black54,
                       side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Limpar'),
                   ),
@@ -457,22 +355,17 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                   child: ElevatedButton(
                     onPressed: () {
                       setState(() {
-                        _valorMin = double.tryParse(
-                            minController.text.replaceAll(',', '.'));
-                        _valorMax = double.tryParse(
-                            maxController.text.replaceAll(',', '.'));
+                        _valorMin = double.tryParse(minController.text.replaceAll(',', '.'));
+                        _valorMax = double.tryParse(maxController.text.replaceAll(',', '.'));
                         _paginaAtual = 0;
                       });
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFC2463C),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Aplicar',
-                        style: TextStyle(color: Colors.white)),
+                    child: const Text('Aplicar', style: TextStyle(color: Colors.white)),
                   ),
                 ),
               ],
@@ -485,403 +378,414 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
 
   @override
   Widget build(BuildContext context) {
+    if (_carregando) {
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFFC2463C)));
+    }
+
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final fmtData = DateFormat('dd/MM/yy', 'pt_BR');
-
     final isVendas = _tabController.index == 0;
     final vendasFiltradas = _vendasFiltradas;
     final despesasFiltradas = _despesasFiltradas;
-    final listaFiltrada =
-        isVendas ? vendasFiltradas : despesasFiltradas;
-
-    final controller = DashboardController(
-      vendas: vendasFiltradas,
-      despesas: despesasFiltradas,
-    );
-
-    final dadosFat =
-        _agruparPorDia(vendasFiltradas, despesasFiltradas, 'faturamento');
-    final dadosCus =
-        _agruparPorDia(vendasFiltradas, despesasFiltradas, 'custos');
-    final dadosLuc =
-        _agruparPorDia(vendasFiltradas, despesasFiltradas, 'lucro');
-    final dias = dadosFat.keys.toList()..sort();
-
+    final listaFiltrada = isVendas ? vendasFiltradas : despesasFiltradas;
     final temFiltroValor = _valorMin != null || _valorMax != null;
 
-    return _carregando
-        ? const Center(
-            child: CircularProgressIndicator(color: Color(0xFFC2463C)))
-        : ListView(
+    final totalVendas = vendasFiltradas.fold(0.0, (s, v) => s + v.valorTotal);
+    final totalDespesas = despesasFiltradas.fold(0.0, (s, d) => s + d.valor);
+    final ticketMedio = vendasFiltradas.isNotEmpty
+        ? totalVendas / vendasFiltradas.length : 0.0;
+    final mediaDespesa = despesasFiltradas.isNotEmpty
+        ? totalDespesas / despesasFiltradas.length : 0.0;
+    final cmvTotal = despesasFiltradas
+        .where((d) => d.tipo == 'ingredientes')
+        .fold(0.0, (s, d) => s + d.valor);
+    final cmvPerc = totalVendas > 0 ? (cmvTotal / totalVendas * 100) : 0.0;
+    final totalPaginas = (listaFiltrada.length / _itensPorPagina).ceil();
+
+    return Column(
+      children: [
+
+        // ── Barra de controles ─────────────────────────────────────────────
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
             children: [
-              // ── Seletor de período ───────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: GestureDetector(
-                  onTap: _abrirSeletorPeriodo,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.calendar_month_outlined,
-                            size: 16, color: Color(0xFFC2463C)),
-                        const SizedBox(width: 8),
-                        Text(
-                          _labelPeriodo,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.keyboard_arrow_down,
-                            size: 18, color: Colors.grey.shade500),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // ── Cards resumo ─────────────────────────────────────────────
-              AdminCardsResumo(
-                faturamento: fmt.format(controller.faturamentoTotal),
-                custos: fmt.format(controller.custosTotal),
-                lucro: fmt.format(controller.lucro.abs()),
-                emPrejuizo: controller.lucro < 0,
-              ),
-
-              const SizedBox(height: 16),
-
-              // ── Gráfico ──────────────────────────────────────────────────
-              if (dias.isNotEmpty)
-                AdminGraficoBarras(
-                  dadosFat: dadosFat,
-                  dadosCus: dadosCus,
-                  dadosLuc: dadosLuc,
-                  dias: dias,
-                ),
-
-              const SizedBox(height: 16),
-
-              // ── Ver/Ocultar detalhes ─────────────────────────────────────
-              Center(
-                child: GestureDetector(
-                  onTap: () =>
-                      setState(() => _tabelaVisivel = !_tabelaVisivel),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _tabelaVisivel
-                              ? 'Ocultar detalhes'
-                              : 'Ver detalhes',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          _tabelaVisivel
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          size: 18,
-                          color: Colors.black38,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Tabela ───────────────────────────────────────────────────
-              if (_tabelaVisivel) ...[
-                const SizedBox(height: 16),
-
-                // Sub-abas
-                Container(
-                  color: Colors.white,
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: const Color(0xFFC2463C),
-                    labelColor: const Color(0xFFC2463C),
-                    unselectedLabelColor: Colors.grey,
-                    labelStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    tabs: const [
-                      Tab(text: 'Vendas'),
-                      Tab(text: 'Despesas'),
-                    ],
-                  ),
-                ),
-
-                // Filtros
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  color: const Color(0xFFE9E4DF),
-                  child: Column(
-                    children: [
-                      // Busca + filtro valor
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              onChanged: (v) => setState(() {
-                                _busca = v;
-                                _paginaAtual = 0;
-                              }),
-                              decoration: InputDecoration(
-                                hintText: 'Buscar...',
-                                hintStyle: const TextStyle(
-                                    fontSize: 13, color: Colors.black38),
-                                prefixIcon: const Icon(Icons.search,
-                                    size: 18, color: Colors.black38),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 0),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Botão filtro valor
-                          GestureDetector(
-                            onTap: _abrirFiltroValor,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: temFiltroValor
-                                    ? const Color(0xFFC2463C)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.filter_list,
-                                size: 20,
-                                color: temFiltroValor
-                                    ? Colors.white
-                                    : Colors.black54,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Filtro categoria
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: (isVendas
-                                  ? _categoriasVendas
-                                  : _categoriasDespesas)
-                              .map((cat) {
-                            final sel = cat == _categoriaSelecionada;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () => setState(() {
-                                  _categoriaSelecionada = cat;
-                                  _paginaAtual = 0;
-                                }),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: sel
-                                        ? const Color(0xFFC2463C)
-                                        : Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: sel
-                                          ? const Color(0xFFC2463C)
-                                          : Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    cat,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: sel
-                                          ? Colors.white
-                                          : Colors.black54,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Total
-                Container(
-                  width: double.infinity,
+              // Período
+              GestureDetector(
+                onTap: _abrirSeletorPeriodo,
+                child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  color: Colors.white,
-                  child: Text(
-                    isVendas
-                        ? '${vendasFiltradas.length} registros · Total ${fmt.format(vendasFiltradas.fold(0.0, (s, v) => s + v.valorTotal))}'
-                        : '${despesasFiltradas.length} registros · Total ${fmt.format(despesasFiltradas.fold(0.0, (s, d) => s + d.valor))}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black54,
-                    ),
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE9E4DF),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_month_outlined,
+                          size: 13, color: Color(0xFFC2463C)),
+                      const SizedBox(width: 4),
+                      Text(_labelPeriodo,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.keyboard_arrow_down,
+                          size: 14, color: Colors.grey.shade500),
+                    ],
                   ),
                 ),
+              ),
+              const Spacer(),
 
-                // Tabela
-                if (isVendas)
-                  AdminTabelaVendas(
-                    vendas: _paginar(vendasFiltradas),
-                    cardapio: _cardapio,
-                    fmt: fmt,
-                    fmtData: fmtData,
-                    onEditar: (vendaAtualizada) async {
-                      await _vendaRepo.atualizarVenda(vendaAtualizada);
-                      await _carregarDados();
-                    },
-                    onDeletar: (id) async {
-                      await _vendaRepo.deletarVenda(id);
-                      await _carregarDados();
-                    },
-                  )
-                else
-                  AdminTabelaDespesas(
-                    despesas: _paginar(despesasFiltradas),
-                    fmt: fmt,
-                    fmtData: fmtData,
-                    onEditar: (despesaAtualizada) async {
-                      await _despesaRepo.atualizarDespesa(despesaAtualizada);
-                      await _carregarDados();
-                    },
-                    onDeletar: (id) async {
-                      await _despesaRepo.deletarDespesa(id);
-                      await _carregarDados();
-                    },
-                  ),
-
-                // Paginação
-                if ((listaFiltrada.length / _itensPorPagina).ceil() > 1)
-                  Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${_paginaAtual * _itensPorPagina + 1}–${((_paginaAtual + 1) * _itensPorPagina).clamp(0, listaFiltrada.length)} de ${listaFiltrada.length}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black54),
+              // Exibir por página
+              const Text('Exibir:',
+                  style: TextStyle(fontSize: 11, color: Colors.black45)),
+              const SizedBox(width: 6),
+              ...[20, 50, 100].map((n) {
+                final sel = n == _itensPorPagina;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: GestureDetector(
+                    onTap: () => setState(() {
+                      _itensPorPagina = n;
+                      _paginaAtual = 0;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: sel
+                            ? const Color(0xFFC2463C) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: sel
+                              ? const Color(0xFFC2463C)
+                              : Colors.grey.shade300,
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios,
-                                  size: 16),
-                              onPressed: _paginaAtual > 0
-                                  ? () => setState(() => _paginaAtual--)
-                                  : null,
-                              color: const Color(0xFFC2463C),
-                            ),
-                            Text(
-                              '${_paginaAtual + 1}/${(listaFiltrada.length / _itensPorPagina).ceil()}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios,
-                                  size: 16),
-                              onPressed: _paginaAtual < (listaFiltrada.length / _itensPorPagina).ceil() - 1
-                                  ? () => setState(() => _paginaAtual++)
-                                  : null,
-                              color: const Color(0xFFC2463C),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
+                      child: Text('$n',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: sel ? Colors.white : Colors.black54,
+                          )),
                     ),
                   ),
+                );
+              }),
+            ],
+          ),
+        ),
 
-                // Botões ações
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.white,
+        // ── Sub-abas ───────────────────────────────────────────────────────
+        Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: const Color(0xFFC2463C),
+            labelColor: const Color(0xFFC2463C),
+            unselectedLabelColor: Colors.grey,
+            labelStyle: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600),
+            tabs: const [Tab(text: 'Vendas'), Tab(text: 'Despesas')],
+          ),
+        ),
+
+        // ── Resumo colapsável ──────────────────────────────────────────────
+        Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              InkWell(
+                onTap: () =>
+                    setState(() => _resumoVisivel = !_resumoVisivel),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFC2463C),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            // TODO: modal adicionar
-                          },
-                          icon: const Icon(Icons.add,
-                              size: 18, color: Colors.white),
-                          label: const Text('Adicionar',
-                              style: TextStyle(color: Colors.white)),
+                      Text(
+                        isVendas
+                            ? '${vendasFiltradas.length} registros · ${fmt.format(totalVendas)}'
+                            : '${despesasFiltradas.length} registros · ${fmt.format(totalDespesas)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black54,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            // TODO: exportar CSV
-                          },
-                          icon: const Icon(Icons.download, size: 18),
-                          label: const Text('Exportar CSV'),
-                        ),
+                      const Spacer(),
+                      Icon(
+                        _resumoVisivel
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: Colors.black38,
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 16),
-              ],
+              ),
+              if (_resumoVisivel)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Row(
+                    children: isVendas
+                        ? [
+                            _ChipResumo(
+                              label: 'Ticket médio',
+                              valor: fmt.format(ticketMedio),
+                              cor: const Color(0xFF2D74C4),
+                            ),
+                            const SizedBox(width: 8),
+                            _ChipResumo(
+                              label: 'Itens vendidos',
+                              valor: '${vendasFiltradas.fold(0, (s, v) => s + v.quantidade)}',
+                              cor: const Color(0xFF2D74C4),
+                            ),
+                          ]
+                        : [
+                            _ChipResumo(
+                              label: 'Média',
+                              valor: fmt.format(mediaDespesa),
+                              cor: const Color(0xFFC2463C),
+                            ),
+                            const SizedBox(width: 8),
+                            _ChipResumo(
+                              label: 'CMV',
+                              valor: '${cmvPerc.toStringAsFixed(1)}%',
+                              cor: cmvPerc <= 35
+                                  ? const Color(0xFF3E8E41)
+                                  : const Color(0xFFC2463C),
+                            ),
+                          ],
+                  ),
+                ),
+              Divider(height: 1, color: Colors.grey.shade200),
             ],
-          );
+          ),
+        ),
+
+        // ── Filtros compactos ──────────────────────────────────────────────
+        Container(
+          color: const Color(0xFFE9E4DF),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 34,
+                      child: TextField(
+                        onChanged: (v) => setState(() {
+                          _busca = v;
+                          _paginaAtual = 0;
+                        }),
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar...',
+                          hintStyle: const TextStyle(
+                              fontSize: 12, color: Colors.black38),
+                          prefixIcon: const Icon(Icons.search,
+                              size: 16, color: Colors.black38),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: EdgeInsets.zero,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _abrirFiltroValor,
+                    child: Container(
+                      width: 34, height: 34,
+                      decoration: BoxDecoration(
+                        color: temFiltroValor
+                            ? const Color(0xFFC2463C) : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.filter_list,
+                          size: 18,
+                          color: temFiltroValor
+                              ? Colors.white : Colors.black54),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 28,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: (isVendas
+                          ? _categoriasVendas
+                          : _categoriasDespesas)
+                      .map((cat) {
+                    final sel = cat == _categoriaSelecionada;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: GestureDetector(
+                        onTap: () => setState(() {
+                          _categoriaSelecionada = cat;
+                          _paginaAtual = 0;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? const Color(0xFFC2463C) : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: sel
+                                  ? const Color(0xFFC2463C)
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Text(cat,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: sel
+                                    ? Colors.white : Colors.black54,
+                              )),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Tabela ─────────────────────────────────────────────────────────
+        Expanded(
+          child: isVendas
+              ? AdminTabelaVendas(
+                  vendas: _paginar(vendasFiltradas),
+                  cardapio: _cardapio,
+                  fmt: fmt,
+                  fmtData: fmtData,
+                  onEditar: (v) async {
+                    await _vendaRepo.atualizarVenda(v);
+                    await _carregarDados();
+                  },
+                  onDeletar: (id) async {
+                    await _vendaRepo.deletarVenda(id);
+                    await _carregarDados();
+                  },
+                )
+              : AdminTabelaDespesas(
+                  despesas: _paginar(despesasFiltradas),
+                  fmt: fmt,
+                  fmtData: fmtData,
+                  onEditar: (d) async {
+                    await _despesaRepo.atualizarDespesa(d);
+                    await _carregarDados();
+                  },
+                  onDeletar: (id) async {
+                    await _despesaRepo.deletarDespesa(id);
+                    await _carregarDados();
+                  },
+                ),
+        ),
+
+        // ── Paginação compacta ─────────────────────────────────────────────
+        if (totalPaginas > 1)
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_paginaAtual * _itensPorPagina + 1}–'
+                  '${((_paginaAtual + 1) * _itensPorPagina).clamp(0, listaFiltrada.length)} '
+                  'de ${listaFiltrada.length}',
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                          minWidth: 32, minHeight: 32),
+                      icon: const Icon(Icons.arrow_back_ios, size: 14),
+                      onPressed: _paginaAtual > 0
+                          ? () => setState(() => _paginaAtual--)
+                          : null,
+                      color: const Color(0xFFC2463C),
+                    ),
+                    Text('${_paginaAtual + 1}/$totalPaginas',
+                        style: const TextStyle(fontSize: 12)),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                          minWidth: 32, minHeight: 32),
+                      icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                      onPressed: _paginaAtual < totalPaginas - 1
+                          ? () => setState(() => _paginaAtual++)
+                          : null,
+                      color: const Color(0xFFC2463C),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ChipResumo extends StatelessWidget {
+  final String label;
+  final String valor;
+  final Color cor;
+
+  const _ChipResumo({
+    required this.label,
+    required this.valor,
+    required this.cor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: cor.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: cor.withOpacity(0.15)),
+        ),
+        child: Row(
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 11, color: Colors.black45)),
+            const Spacer(),
+            Text(valor,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: cor,
+                )),
+          ],
+        ),
+      ),
+    );
   }
 }

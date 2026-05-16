@@ -23,6 +23,9 @@ class DespesaRepository {
       categoria: map['categoria'],
       valor: (map['valor'] as num).toDouble(),
       data: DateTime.parse(map['data']),
+      observacao: map['observacao'],
+      categoriaId: map['categoria_id'],
+      tipo: map['tipo'] ?? 'outros',
     )).toList();
   }
 
@@ -35,6 +38,9 @@ class DespesaRepository {
       'categoria': despesa.categoria,
       'valor': despesa.valor,
       'data': despesa.data.toIso8601String(),
+      'observacao': despesa.observacao,
+      'categoria_id': despesa.categoriaId,
+      'tipo': despesa.tipo,
     }).select().single();
 
     return Despesa(
@@ -43,6 +49,9 @@ class DespesaRepository {
       categoria: data['categoria'],
       valor: (data['valor'] as num).toDouble(),
       data: DateTime.parse(data['data']),
+      observacao: data['observacao'],
+      categoriaId: data['categoria_id'],
+      tipo: data['tipo'] ?? 'outros',
     );
   }
 
@@ -52,6 +61,9 @@ class DespesaRepository {
       'categoria': despesa.categoria,
       'valor': despesa.valor,
       'data': despesa.data.toIso8601String(),
+      'observacao': despesa.observacao,
+      'categoria_id': despesa.categoriaId,
+      'tipo': despesa.tipo,
     }).eq('id', despesa.id);
   }
 

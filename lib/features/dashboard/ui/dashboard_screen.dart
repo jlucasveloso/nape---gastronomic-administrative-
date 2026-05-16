@@ -7,8 +7,6 @@ import 'package:proj_nape/main_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:proj_nape/features/perfil/ui/perfil_bottom_sheet.dart';
 
-// ── Períodos ──────────────────────────────────────────────────────────────────
-
 enum _Periodo { hoje, ontem, semana, mes, custom }
 
 extension _PeriodoLabel on _Periodo {
@@ -22,8 +20,6 @@ extension _PeriodoLabel on _Periodo {
     }
   }
 }
-
-// ── Tela ──────────────────────────────────────────────────────────────────────
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -99,7 +95,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _abrirSeletor(BuildContext context) async {
-    final opcoes = _Periodo.values.where((p) => p != _Periodo.custom).toList();
+    final opcoes =
+        _Periodo.values.where((p) => p != _Periodo.custom).toList();
 
     final resultado = await showModalBottomSheet<_Periodo>(
       context: context,
@@ -220,11 +217,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? Icons.trending_down
         : Icons.account_balance_wallet_outlined;
 
+    // Pendentes
+    final pendentes = appState.recorrentesPendentes;
+
     return Scaffold(
       body: Column(
         children: [
 
-          // ── Header ──────────────────────────────────────────────────────
+          // ── Header ────────────────────────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
@@ -236,126 +236,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             child: Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    const Text(
-      'Dashboard',
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    GestureDetector(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Colors.transparent,
-          builder: (_) => const PerfilBottomSheet(),
-        );
-      },
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.person_outline,
-          color: Colors.white,
-          size: 22,
-        ),
-      ),
-    ),
-  ],
-),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const PerfilBottomSheet(),
+                    );
+                  },
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // ── Conteúdo ────────────────────────────────────────────────────
+          // ── Conteúdo ──────────────────────────────────────────────────────
           Expanded(
             child: Container(
               color: const Color(0xFFE9E4DF),
               child: ListView(
-                      padding: const EdgeInsets.all(20),
-                      children: [
+                padding: const EdgeInsets.all(20),
+                children: [
 
-                        // ── Seletor de período ───────────────────────────
-                        GestureDetector(
-                          onTap: () => _abrirSeletor(context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.calendar_month_outlined,
-                                    size: 16, color: Color(0xFFC2463C)),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _labelAtivo,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(Icons.keyboard_arrow_down,
-                                    size: 18, color: Colors.grey.shade500),
-                              ],
+                  // ── Seletor de período ──────────────────────────────────
+                  GestureDetector(
+                    onTap: () => _abrirSeletor(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_month_outlined,
+                              size: 16, color: Color(0xFFC2463C)),
+                          const SizedBox(width: 8),
+                          Text(
+                            _labelAtivo,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
                             ),
                           ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ── Label resumo ─────────────────────────────────
-                        const Text(
-                          'Resumo',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // ── Cards ────────────────────────────────────────
-                        InfoCard(
-                          titulo: 'Faturamento',
-                          valor: fmt.format(controller.faturamentoTotal),
-                          subtitulo: '$nVendas itens vendidos',
-                          cor: const Color(0xFF2D74C4),
-                          icone: Icons.trending_up,
-                          onTap: () => mainScreenKey.currentState?.trocarAba(1),
-                        ),
-                        const SizedBox(height: 12),
-                        InfoCard(
-                          titulo: 'Custos',
-                          valor: fmt.format(controller.custosTotal),
-                          subtitulo: '$nCategorias categorias de despesa',
-                          cor: const Color(0xFFC2463C),
-                          icone: Icons.trending_down,
-                          onTap: () => mainScreenKey.currentState?.trocarAba(2),
-                        ),
-                        const SizedBox(height: 12),
-                        InfoCard(
-                          titulo: tituloLucro,
-                          valor: valorLucro,
-                          subtitulo: subtituloLucro,
-                          cor: corLucro,
-                          icone: iconeLucro,
-                          onTap: () => mainScreenKey.currentState?.trocarAba(3),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Icon(Icons.keyboard_arrow_down,
+                              size: 18, color: Colors.grey.shade500),
+                        ],
+                      ),
                     ),
+                  ),
+
+                  // ── Alerta de recorrentes pendentes ─────────────────────
+                  if (pendentes.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () => mainScreenKey.currentState?.trocarAba(2),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: const Color(0xFFFFB300)
+                                  .withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded,
+                                color: Color(0xFFFFB300), size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${pendentes.length} despesa${pendentes.length > 1 ? 's recorrentes pendentes' : ' recorrente pendente'} este mês',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF7A5100),
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios,
+                                size: 12, color: Color(0xFFFFB300)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // ── Label resumo ────────────────────────────────────────
+                  const Text(
+                    'Resumo',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Cards ───────────────────────────────────────────────
+                  InfoCard(
+                    titulo: 'Faturamento',
+                    valor: fmt.format(controller.faturamentoTotal),
+                    subtitulo: '$nVendas itens vendidos',
+                    cor: const Color(0xFF2D74C4),
+                    icone: Icons.trending_up,
+                    onTap: () => mainScreenKey.currentState?.trocarAba(1),
+                  ),
+                  const SizedBox(height: 12),
+                  InfoCard(
+                    titulo: 'Custos',
+                    valor: fmt.format(controller.custosTotal),
+                    subtitulo: '$nCategorias categorias de despesa',
+                    cor: const Color(0xFFC2463C),
+                    icone: Icons.trending_down,
+                    onTap: () => mainScreenKey.currentState?.trocarAba(2),
+                  ),
+                  const SizedBox(height: 12),
+                  InfoCard(
+                    titulo: tituloLucro,
+                    valor: valorLucro,
+                    subtitulo: subtituloLucro,
+                    cor: corLucro,
+                    icone: iconeLucro,
+                    onTap: () => mainScreenKey.currentState?.trocarAba(4),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

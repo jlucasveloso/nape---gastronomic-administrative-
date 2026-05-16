@@ -3,7 +3,7 @@ import 'package:proj_nape/features/dashboard/model/produto_cardapio.dart';
 import 'package:proj_nape/features/dashboard/model/venda.dart';
 import 'package:intl/intl.dart';
 
-enum _Coluna { data, produto, categoria, quantidade, total }
+enum _ColunaVenda { data, produto, quantidade, total }
 
 class AdminTabelaVendas extends StatefulWidget {
   final List<Venda> vendas;
@@ -28,11 +28,10 @@ class AdminTabelaVendas extends StatefulWidget {
 }
 
 class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
-  _Coluna _colunaOrdenada = _Coluna.data;
+  _ColunaVenda _colunaOrdenada = _ColunaVenda.data;
   bool _ascendente = false;
-  String? _editandoId;
+  String? _expandidoId;
 
-  // Controllers para edição inline
   final _nomeController = TextEditingController();
   final _categoriaController = TextEditingController();
   final _precoController = TextEditingController();
@@ -56,71 +55,21 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
     lista.sort((a, b) {
       int cmp;
       switch (_colunaOrdenada) {
-        case _Coluna.data:
-          cmp = a.data.compareTo(b.data);
-          break;
-        case _Coluna.produto:
-          cmp = a.nomeProdutoSnapshot.compareTo(b.nomeProdutoSnapshot);
-          break;
-        case _Coluna.categoria:
-          cmp = a.categoriaSnapshot.compareTo(b.categoriaSnapshot);
-          break;
-        case _Coluna.quantidade:
-          cmp = a.quantidade.compareTo(b.quantidade);
-          break;
-        case _Coluna.total:
-          cmp = a.valorTotal.compareTo(b.valorTotal);
-          break;
+        case _ColunaVenda.data:
+          cmp = a.data.compareTo(b.data); break;
+        case _ColunaVenda.produto:
+          cmp = a.nomeProdutoSnapshot.compareTo(b.nomeProdutoSnapshot); break;
+        case _ColunaVenda.quantidade:
+          cmp = a.quantidade.compareTo(b.quantidade); break;
+        case _ColunaVenda.total:
+          cmp = a.valorTotal.compareTo(b.valorTotal); break;
       }
       return _ascendente ? cmp : -cmp;
     });
     return lista;
   }
 
-  void _iniciarEdicao(Venda venda) {
-    setState(() {
-      _editandoId = venda.id;
-      _nomeController.text = venda.nomeProdutoSnapshot;
-      _categoriaController.text = venda.categoriaSnapshot;
-      _precoController.text = venda.precoUnitarioSnapshot.toStringAsFixed(2);
-      _quantidadeController.text = venda.quantidade.toString();
-      _dataEditando = venda.data;
-      _produtoSelecionado = null;
-      _mostrandoBuscaProduto = false;
-      _termoBusca = '';
-    });
-  }
-
-  void _cancelarEdicao() {
-    setState(() {
-      _editandoId = null;
-      _mostrandoBuscaProduto = false;
-      _termoBusca = '';
-    });
-  }
-
-  Future<void> _salvarEdicao(Venda vendaOriginal) async {
-    final preco = double.tryParse(
-        _precoController.text.trim().replaceAll(',', '.'));
-    final quantidade = int.tryParse(_quantidadeController.text.trim());
-
-    if (preco == null || quantidade == null) return;
-
-    final vendaAtualizada = Venda(
-      id: vendaOriginal.id,
-      produtoId: _produtoSelecionado?.id ?? vendaOriginal.produtoId,
-      nomeProdutoSnapshot: _nomeController.text.trim(),
-      categoriaSnapshot: _categoriaController.text.trim(),
-      precoUnitarioSnapshot: preco,
-      quantidade: quantidade,
-      data: _dataEditando ?? vendaOriginal.data,
-    );
-
-    await widget.onEditar(vendaAtualizada);
-    setState(() => _editandoId = null);
-  }
-
-  void _ordenarPor(_Coluna coluna) {
+  void _ordenarPor(_ColunaVenda coluna) {
     setState(() {
       if (_colunaOrdenada == coluna) {
         _ascendente = !_ascendente;
@@ -129,6 +78,42 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
         _ascendente = false;
       }
     });
+  }
+
+  void _expandir(Venda venda) {
+    setState(() {
+      if (_expandidoId == venda.id) {
+        _expandidoId = null;
+      } else {
+        _expandidoId = venda.id;
+        _nomeController.text = venda.nomeProdutoSnapshot;
+        _categoriaController.text = venda.categoriaSnapshot;
+        _precoController.text = venda.precoUnitarioSnapshot.toStringAsFixed(2);
+        _quantidadeController.text = venda.quantidade.toString();
+        _dataEditando = venda.data;
+        _produtoSelecionado = null;
+        _mostrandoBuscaProduto = false;
+        _termoBusca = '';
+      }
+    });
+  }
+
+  Future<void> _salvar(Venda original) async {
+    final preco = double.tryParse(
+        _precoController.text.trim().replaceAll(',', '.'));
+    final quantidade = int.tryParse(_quantidadeController.text.trim());
+    if (preco == null || quantidade == null) return;
+
+    await widget.onEditar(Venda(
+      id: original.id,
+      produtoId: _produtoSelecionado?.id ?? original.produtoId,
+      nomeProdutoSnapshot: _nomeController.text.trim(),
+      categoriaSnapshot: _categoriaController.text.trim(),
+      precoUnitarioSnapshot: preco,
+      quantidade: quantidade,
+      data: _dataEditando ?? original.data,
+    ));
+    setState(() => _expandidoId = null);
   }
 
   Future<void> _selecionarData(BuildContext context) async {
@@ -141,133 +126,477 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFFC2463C),
-            onPrimary: Colors.white,
-          ),
+            primary: Color(0xFFC2463C), onPrimary: Colors.white),
         ),
         child: child!,
       ),
     );
-    if (picked != null) {
-      setState(() => _dataEditando = picked);
-    }
+    if (picked != null) setState(() => _dataEditando = picked);
+  }
+
+  void _abrirBottomSheet(BuildContext context, Venda venda) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _VendaBottomSheet(
+        venda: venda,
+        fmt: widget.fmt,
+        fmtData: widget.fmtData,
+        onDeletar: () async {
+          Navigator.pop(context);
+          await widget.onDeletar(venda.id);
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final fmt = widget.fmt;
-    final fmtData = widget.fmtData;
     final vendas = _vendasOrdenadas;
+
+    if (vendas.isEmpty) {
+      return const Center(
+        child: Text('Nenhuma venda encontrada',
+            style: TextStyle(color: Colors.black38)));
+    }
 
     return Column(
       children: [
-        // ── Cabeçalho ────────────────────────────────────────────────────
+        // ── Cabeçalho ──────────────────────────────────────────────────────
         Container(
-          color: Colors.grey.shade100,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: const Color(0xFFF0F0F0),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
-              _Cabecalho(
-                texto: 'Data',
-                largura: 70,
-                coluna: _Coluna.data,
-                ativa: _colunaOrdenada,
-                ascendente: _ascendente,
-                onTap: _ordenarPor,
-              ),
-              const SizedBox(width: 4),
-              _Cabecalho(
-                texto: 'Produto',
-                largura: null,
-                coluna: _Coluna.produto,
-                ativa: _colunaOrdenada,
-                ascendente: _ascendente,
-                onTap: _ordenarPor,
-              ),
-              const SizedBox(width: 4),
-              _Cabecalho(
-                texto: 'Qtd',
-                largura: 35,
-                coluna: _Coluna.quantidade,
-                ativa: _colunaOrdenada,
-                ascendente: _ascendente,
-                onTap: _ordenarPor,
-              ),
-              const SizedBox(width: 4),
-              _Cabecalho(
-                texto: 'Total',
-                largura: 70,
-                coluna: _Coluna.total,
-                ativa: _colunaOrdenada,
-                ascendente: _ascendente,
-                onTap: _ordenarPor,
-              ),
-              const SizedBox(width: 32),
+              _Cabecalho(texto: 'Data', largura: 58,
+                  coluna: _ColunaVenda.data, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Produto', largura: null,
+                  coluna: _ColunaVenda.produto, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Qtd', largura: 30,
+                  coluna: _ColunaVenda.quantidade, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Total', largura: 72,
+                  coluna: _ColunaVenda.total, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              const SizedBox(width: 20),
             ],
           ),
         ),
 
-        // ── Linhas ───────────────────────────────────────────────────────
-        if (vendas.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(
-              child: Text(
-                'Nenhuma venda encontrada',
-                style: TextStyle(color: Colors.black38),
-              ),
-            ),
-          )
-        else
-          ...vendas.map((venda) {
-            final estaEditando = _editandoId == venda.id;
+        // ── Linhas ─────────────────────────────────────────────────────────
+        Expanded(
+          child: ListView.builder(
+            itemCount: vendas.length,
+            itemBuilder: (context, index) {
+              final venda = vendas[index];
+              final expandido = _expandidoId == venda.id;
+              final par = index % 2 == 0;
 
-            if (estaEditando) {
-              return _LinhaEdicaoVenda(
-                venda: venda,
-                cardapio: widget.cardapio,
-                nomeController: _nomeController,
-                categoriaController: _categoriaController,
-                precoController: _precoController,
-                quantidadeController: _quantidadeController,
-                dataEditando: _dataEditando ?? venda.data,
-                produtoSelecionado: _produtoSelecionado,
-                mostrandoBusca: _mostrandoBuscaProduto,
-                termoBusca: _termoBusca,
-                fmt: fmt,
-                fmtData: fmtData,
-                onSelecionarData: () => _selecionarData(context),
-                onToggleBusca: () => setState(() {
-                  _mostrandoBuscaProduto = !_mostrandoBuscaProduto;
-                  _termoBusca = '';
-                }),
-                onBuscaChanged: (v) => setState(() => _termoBusca = v),
-                onSelecionarProduto: (p) => setState(() {
-                  _produtoSelecionado = p;
-                  _nomeController.text = p.nome;
-                  _categoriaController.text = p.categoria;
-                  _precoController.text = p.preco.toStringAsFixed(2);
-                  _mostrandoBuscaProduto = false;
-                  _termoBusca = '';
-                }),
-                onSalvar: () => _salvarEdicao(venda),
-                onCancelar: _cancelarEdicao,
+              return Column(
+                children: [
+                  // Linha compacta
+                  GestureDetector(
+                    onTap: () => _expandir(venda),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: expandido
+                            ? const Color(0xFFFFF0F0)
+                            : par
+                                ? Colors.white
+                                : const Color(0xFFFAFAFA),
+                        border: Border(
+                          left: expandido
+                              ? const BorderSide(
+                                  color: Color(0xFFC2463C), width: 3)
+                              : BorderSide.none,
+                          bottom: BorderSide(
+                              color: Colors.grey.shade200, width: 1),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 58,
+                            child: Text(
+                              widget.fmtData.format(venda.data),
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.black45),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              venda.nomeProdutoSnapshot,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 30,
+                            child: Text('${venda.quantidade}x',
+                                style: const TextStyle(
+                                    fontSize: 11, color: Colors.black45)),
+                          ),
+                          SizedBox(
+                            width: 72,
+                            child: Text(
+                              widget.fmt.format(venda.valorTotal),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D74C4),
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            expandido
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            size: 16,
+                            color: Colors.black26,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Expansão inline editável
+                  if (expandido)
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFF0F0),
+                        border: Border(
+                          left: BorderSide(
+                              color: Color(0xFFC2463C), width: 3),
+                        ),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Data
+                          GestureDetector(
+                            onTap: () => _selecionarData(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.calendar_today,
+                                      size: 12,
+                                      color: Color(0xFFC2463C)),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    widget.fmtData.format(
+                                        _dataEditando ?? venda.data),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Busca produto
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _mostrandoBuscaProduto =
+                                  !_mostrandoBuscaProduto;
+                              _termoBusca = '';
+                            }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: _mostrandoBuscaProduto
+                                      ? const Color(0xFFC2463C)
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.search,
+                                      size: 14, color: Colors.black38),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      _nomeController.text.isEmpty
+                                          ? 'Selecionar produto...'
+                                          : _nomeController.text,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: _nomeController.text.isEmpty
+                                            ? Colors.black38
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    _mostrandoBuscaProduto
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    size: 14,
+                                    color: Colors.black38,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          if (_mostrandoBuscaProduto) ...[
+                            const SizedBox(height: 4),
+                            TextField(
+                              autofocus: true,
+                              onChanged: (v) =>
+                                  setState(() => _termoBusca = v),
+                              style: const TextStyle(fontSize: 12),
+                              decoration: InputDecoration(
+                                hintText: 'Buscar no cardápio...',
+                                hintStyle: const TextStyle(
+                                    fontSize: 12, color: Colors.black38),
+                                prefixIcon: const Icon(Icons.search,
+                                    size: 14, color: Colors.black38),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: EdgeInsets.zero,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                      color: Colors.grey.shade300),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              constraints:
+                                  const BoxConstraints(maxHeight: 120),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: Colors.grey.shade200),
+                              ),
+                              child: ListView(
+                                shrinkWrap: true,
+                                children: widget.cardapio
+                                    .where((p) =>
+                                        p.nome.toLowerCase().contains(
+                                            _termoBusca.toLowerCase()) ||
+                                        p.categoria.toLowerCase().contains(
+                                            _termoBusca.toLowerCase()))
+                                    .map((p) => ListTile(
+                                          dense: true,
+                                          title: Text(p.nome,
+                                              style: const TextStyle(
+                                                  fontSize: 12)),
+                                          subtitle: Text(p.categoria,
+                                              style: const TextStyle(
+                                                  fontSize: 11)),
+                                          trailing: Text(
+                                            widget.fmt.format(p.preco),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF3E8E41),
+                                            ),
+                                          ),
+                                          onTap: () => setState(() {
+                                            _produtoSelecionado = p;
+                                            _nomeController.text = p.nome;
+                                            _categoriaController.text =
+                                                p.categoria;
+                                            _precoController.text =
+                                                p.preco.toStringAsFixed(2);
+                                            _mostrandoBuscaProduto = false;
+                                            _termoBusca = '';
+                                          }),
+                                        ))
+                                    .toList(),
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _Campo(
+                                  label: 'Qtd',
+                                  controller: _quantidadeController,
+                                  teclado: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _Campo(
+                                  label: 'Preço unit.',
+                                  controller: _precoController,
+                                  teclado: const TextInputType
+                                      .numberWithOptions(decimal: true),
+                                  prefixo: 'R\$ ',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(
+                                onPressed: () =>
+                                    _abrirBottomSheet(context, venda),
+                                style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero),
+                                child: const Text('Ver mais',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black45)),
+                              ),
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () => setState(
+                                        () => _expandidoId = null),
+                                    style: TextButton.styleFrom(
+                                        padding: EdgeInsets.zero),
+                                    child: const Text('Cancelar',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black45)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: 30,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFFC2463C),
+                                        padding: const EdgeInsets
+                                            .symmetric(horizontal: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                      ),
+                                      onPressed: () => _salvar(venda),
+                                      child: const Text('Salvar',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.white)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               );
-            }
-
-            return _LinhaVenda(
-              venda: venda,
-              fmt: fmt,
-              fmtData: fmtData,
-              onEditar: () => _iniciarEdicao(venda),
-              onDeletar: () => _confirmarDelecao(context, venda),
-            );
-          }),
+            },
+          ),
+        ),
       ],
     );
   }
+}
 
-  void _confirmarDelecao(BuildContext context, Venda venda) {
+// ── Bottom Sheet ──────────────────────────────────────────────────────────────
+
+class _VendaBottomSheet extends StatelessWidget {
+  final Venda venda;
+  final NumberFormat fmt;
+  final DateFormat fmtData;
+  final VoidCallback onDeletar;
+
+  const _VendaBottomSheet({
+    required this.venda,
+    required this.fmt,
+    required this.fmtData,
+    required this.onDeletar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(venda.nomeProdutoSnapshot,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87)),
+          const SizedBox(height: 4),
+          Text(venda.categoriaSnapshot,
+              style: const TextStyle(fontSize: 13, color: Colors.black38)),
+          const SizedBox(height: 20),
+          _LinhaDetalhe(label: 'Data', valor: fmtData.format(venda.data)),
+          _LinhaDetalhe(label: 'Quantidade', valor: '${venda.quantidade}x'),
+          _LinhaDetalhe(label: 'Preço unit.',
+              valor: fmt.format(venda.precoUnitarioSnapshot)),
+          _LinhaDetalhe(label: 'Total', valor: fmt.format(venda.valorTotal)),
+          _LinhaDetalhe(label: 'ID', valor: venda.id),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFC2463C),
+                side: const BorderSide(color: Color(0xFFC2463C)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => _confirmarDelecao(context),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Deletar venda'),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  void _confirmarDelecao(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -282,10 +611,7 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
                 style: TextStyle(color: Colors.black54)),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              widget.onDeletar(venda.id);
-            },
+            onPressed: onDeletar,
             child: const Text('Deletar',
                 style: TextStyle(color: Color(0xFFC2463C))),
           ),
@@ -295,15 +621,43 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
   }
 }
 
-// ── Cabeçalho clicável ────────────────────────────────────────────────────────
+// ── Widgets ───────────────────────────────────────────────────────────────────
+
+class _LinhaDetalhe extends StatelessWidget {
+  final String label;
+  final String valor;
+  const _LinhaDetalhe({required this.label, required this.valor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 13, color: Colors.black45)),
+          Flexible(
+            child: Text(valor,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87),
+                textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _Cabecalho extends StatelessWidget {
   final String texto;
   final double? largura;
-  final _Coluna coluna;
-  final _Coluna ativa;
+  final _ColunaVenda coluna;
+  final _ColunaVenda ativa;
   final bool ascendente;
-  final void Function(_Coluna) onTap;
+  final void Function(_ColunaVenda) onTap;
 
   const _Cabecalho({
     required this.texto,
@@ -317,392 +671,33 @@ class _Cabecalho extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAtiva = ativa == coluna;
-    final widget = GestureDetector(
+    final child = GestureDetector(
       onTap: () => onTap(coluna),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            texto,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: isAtiva ? const Color(0xFFC2463C) : Colors.black45,
-            ),
-          ),
+          Text(texto,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: isAtiva
+                    ? const Color(0xFFC2463C) : Colors.black45,
+              )),
           if (isAtiva) ...[
             const SizedBox(width: 2),
             Icon(
               ascendente ? Icons.arrow_upward : Icons.arrow_downward,
-              size: 10,
+              size: 9,
               color: const Color(0xFFC2463C),
             ),
           ],
         ],
       ),
     );
-
-    if (largura != null) {
-      return SizedBox(width: largura, child: widget);
-    }
-    return Expanded(child: widget);
+    if (largura != null) return SizedBox(width: largura, child: child);
+    return Expanded(child: child);
   }
 }
-
-// ── Linha normal ──────────────────────────────────────────────────────────────
-
-class _LinhaVenda extends StatelessWidget {
-  final Venda venda;
-  final NumberFormat fmt;
-  final DateFormat fmtData;
-  final VoidCallback onEditar;
-  final VoidCallback onDeletar;
-
-  const _LinhaVenda({
-    required this.venda,
-    required this.fmt,
-    required this.fmtData,
-    required this.onEditar,
-    required this.onDeletar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 70,
-            child: Text(fmtData.format(venda.data),
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  venda.nomeProdutoSnapshot,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w500),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  venda.categoriaSnapshot,
-                  style: const TextStyle(fontSize: 11, color: Colors.black38),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 35,
-            child: Text('${venda.quantidade}x',
-                style:
-                    const TextStyle(fontSize: 12, color: Colors.black54)),
-          ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 70,
-            child: Text(
-              fmt.format(venda.valorTotal),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D74C4),
-              ),
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert,
-                size: 18, color: Colors.black38),
-            onSelected: (value) {
-              if (value == 'editar') onEditar();
-              if (value == 'deletar') onDeletar();
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'editar',
-                child: Row(children: [
-                  Icon(Icons.edit_outlined,
-                      size: 16, color: Colors.black54),
-                  SizedBox(width: 8),
-                  Text('Editar', style: TextStyle(fontSize: 13)),
-                ]),
-              ),
-              const PopupMenuItem(
-                value: 'deletar',
-                child: Row(children: [
-                  Icon(Icons.delete_outline,
-                      size: 16, color: Color(0xFFC2463C)),
-                  SizedBox(width: 8),
-                  Text('Deletar',
-                      style: TextStyle(
-                          fontSize: 13, color: Color(0xFFC2463C))),
-                ]),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Linha em edição ───────────────────────────────────────────────────────────
-
-class _LinhaEdicaoVenda extends StatelessWidget {
-  final Venda venda;
-  final List<ProdutoCardapio> cardapio;
-  final TextEditingController nomeController;
-  final TextEditingController categoriaController;
-  final TextEditingController precoController;
-  final TextEditingController quantidadeController;
-  final DateTime dataEditando;
-  final ProdutoCardapio? produtoSelecionado;
-  final bool mostrandoBusca;
-  final String termoBusca;
-  final NumberFormat fmt;
-  final DateFormat fmtData;
-  final VoidCallback onSelecionarData;
-  final VoidCallback onToggleBusca;
-  final void Function(String) onBuscaChanged;
-  final void Function(ProdutoCardapio) onSelecionarProduto;
-  final VoidCallback onSalvar;
-  final VoidCallback onCancelar;
-
-  const _LinhaEdicaoVenda({
-    required this.venda,
-    required this.cardapio,
-    required this.nomeController,
-    required this.categoriaController,
-    required this.precoController,
-    required this.quantidadeController,
-    required this.dataEditando,
-    required this.produtoSelecionado,
-    required this.mostrandoBusca,
-    required this.termoBusca,
-    required this.fmt,
-    required this.fmtData,
-    required this.onSelecionarData,
-    required this.onToggleBusca,
-    required this.onBuscaChanged,
-    required this.onSelecionarProduto,
-    required this.onSalvar,
-    required this.onCancelar,
-  });
-
-  List<ProdutoCardapio> get _produtosFiltrados => cardapio
-      .where((p) =>
-          p.nome.toLowerCase().contains(termoBusca.toLowerCase()) ||
-          p.categoria.toLowerCase().contains(termoBusca.toLowerCase()))
-      .toList();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8F8),
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade100),
-          left: const BorderSide(color: Color(0xFFC2463C), width: 3),
-        ),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Data
-          GestureDetector(
-            onTap: onSelecionarData,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.calendar_today,
-                      size: 14, color: Color(0xFFC2463C)),
-                  const SizedBox(width: 6),
-                  Text(
-                    fmtData.format(dataEditando),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Produto — busca no cardápio
-          GestureDetector(
-            onTap: onToggleBusca,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: mostrandoBusca
-                      ? const Color(0xFFC2463C)
-                      : Colors.grey.shade300,
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search,
-                      size: 16, color: Colors.black38),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      nomeController.text.isEmpty
-                          ? 'Selecionar produto...'
-                          : nomeController.text,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: nomeController.text.isEmpty
-                            ? Colors.black38
-                            : Colors.black87,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    mostrandoBusca
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    size: 16,
-                    color: Colors.black38,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Lista de produtos
-          if (mostrandoBusca) ...[
-            const SizedBox(height: 4),
-            TextField(
-              autofocus: true,
-              onChanged: onBuscaChanged,
-              decoration: InputDecoration(
-                hintText: 'Buscar no cardápio...',
-                hintStyle:
-                    const TextStyle(fontSize: 12, color: Colors.black38),
-                prefixIcon: const Icon(Icons.search,
-                    size: 16, color: Colors.black38),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide:
-                      BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 150),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _produtosFiltrados.length,
-                itemBuilder: (context, index) {
-                  final p = _produtosFiltrados[index];
-                  return ListTile(
-                    dense: true,
-                    title: Text(p.nome,
-                        style: const TextStyle(fontSize: 13)),
-                    subtitle: Text(p.categoria,
-                        style: const TextStyle(fontSize: 11)),
-                    trailing: Text(
-                      fmt.format(p.preco),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF3E8E41),
-                      ),
-                    ),
-                    onTap: () => onSelecionarProduto(p),
-                  );
-                },
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 8),
-
-          // Quantidade e Preço
-          Row(
-            children: [
-              Expanded(
-                child: _Campo(
-                  label: 'Quantidade',
-                  controller: quantidadeController,
-                  teclado: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _Campo(
-                  label: 'Preço unit.',
-                  controller: precoController,
-                  teclado: const TextInputType.numberWithOptions(
-                      decimal: true),
-                  prefixo: 'R\$ ',
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Botões confirmar/cancelar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: onCancelar,
-                child: const Text('Cancelar',
-                    style: TextStyle(color: Colors.black54)),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC2463C),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: onSalvar,
-                child: const Text('Salvar',
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Campo de input ────────────────────────────────────────────────────────────
 
 class _Campo extends StatelessWidget {
   final String label;
@@ -722,23 +717,23 @@ class _Campo extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: teclado,
+      style: const TextStyle(fontSize: 12),
       decoration: InputDecoration(
         labelText: label,
         prefixText: prefixo,
         filled: true,
         fillColor: Colors.white,
-        labelStyle:
-            const TextStyle(fontSize: 12, color: Colors.black45),
+        labelStyle: const TextStyle(fontSize: 11, color: Colors.black45),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: Color(0xFFC2463C)),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8, vertical: 6),
       ),
     );
   }

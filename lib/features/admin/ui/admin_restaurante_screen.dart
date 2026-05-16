@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:proj_nape/features/perfil/model/perfil.dart';
-import 'package:proj_nape/features/admin/ui/abas/admin_resumo_aba.dart';
+import 'package:proj_nape/features/admin/ui/abas/admin_analise_aba.dart';
 import 'package:proj_nape/features/admin/ui/abas/admin_dados_aba.dart';
 import 'package:proj_nape/features/admin/ui/abas/admin_cardapio_aba.dart';
 
@@ -20,7 +20,7 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
   @override
   Widget build(BuildContext context) {
     final telas = [
-      AdminResumoAba(userId: widget.perfil.id),
+      AdminAnaliseAba(userId: widget.perfil.id),
       AdminDadosAba(userId: widget.perfil.id),
       AdminCardapioAba(userId: widget.perfil.id),
     ];
@@ -105,9 +105,9 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'Resumo',
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Análise',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.table_chart_outlined),

@@ -5,6 +5,8 @@ class Despesa {
   final double valor;
   final DateTime data;
   final String? observacao;
+  final String? categoriaId;
+  final String tipo; // ingredientes | mao_de_obra | fixo | operacional | outros
 
   const Despesa({
     required this.id,
@@ -13,6 +15,8 @@ class Despesa {
     required this.valor,
     required this.data,
     this.observacao,
+    this.categoriaId,
+    this.tipo = 'outros',
   });
 
   @override
