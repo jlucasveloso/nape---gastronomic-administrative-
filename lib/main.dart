@@ -17,7 +17,10 @@ void main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-await TempAuth.init();
+  await TempAuth.init();
+
+  // Temporário: força o app a abrir sempre na tela de login durante os testes.
+  TempAuth.logout();
 
   runApp(
     ChangeNotifierProvider(
@@ -116,6 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF2B2B2B),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -130,7 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 40),
-
                 const Text(
                   'Napê',
                   style: TextStyle(
@@ -139,9 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Color(0xFFC2463C),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 const Text(
                   'Entrar na conta',
                   style: TextStyle(
@@ -149,18 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.black54,
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
                 _input(
                   'Email',
                   _emailController,
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: Icons.email_outlined,
                 ),
-
                 const SizedBox(height: 16),
-
                 _input(
                   'Senha',
                   _senhaController,
@@ -180,9 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 if (_erro != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -195,9 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-
                 const SizedBox(height: 16),
-
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFC2463C),
@@ -221,9 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(color: Colors.white),
                         ),
                 ),
-
                 const SizedBox(height: 12),
-
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -246,7 +237,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
               ],
             ),
