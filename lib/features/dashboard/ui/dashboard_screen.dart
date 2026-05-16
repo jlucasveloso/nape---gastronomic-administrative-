@@ -206,7 +206,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final nVendas = vendasFiltradas.fold(0, (s, v) => s + v.quantidade);
-    final nCategorias = controller.custosPorCategoria.keys.length;
 
     final bool emPrejuizo = controller.lucro < 0;
     final String tituloLucro = emPrejuizo ? 'Prejuízo' : 'Lucro';
