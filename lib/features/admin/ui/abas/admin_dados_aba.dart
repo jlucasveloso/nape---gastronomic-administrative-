@@ -409,10 +409,9 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
         // ── Barra de controles ─────────────────────────────────────────────
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              // Período
               GestureDetector(
                 onTap: _abrirSeletorPeriodo,
                 child: Container(
@@ -441,8 +440,6 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                 ),
               ),
               const Spacer(),
-
-              // Exibir por página
               const Text('Exibir:',
                   style: TextStyle(fontSize: 11, color: Colors.black45)),
               const SizedBox(width: 6),
@@ -506,7 +503,7 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                     setState(() => _resumoVisivel = !_resumoVisivel),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                      horizontal: 12, vertical: 8),
                   child: Row(
                     children: [
                       Text(
@@ -566,15 +563,14 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                           ],
                   ),
                 ),
-              Divider(height: 1, color: Colors.grey.shade200),
             ],
           ),
         ),
 
-        // ── Filtros compactos ──────────────────────────────────────────────
+        // ── Filtros ────────────────────────────────────────────────────────
         Container(
-          color: const Color(0xFFE9E4DF),
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
           child: Column(
             children: [
               Row(
@@ -595,7 +591,7 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                           prefixIcon: const Icon(Icons.search,
                               size: 16, color: Colors.black38),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: const Color(0xFFF5F5F5),
                           contentPadding: EdgeInsets.zero,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -609,10 +605,12 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                   GestureDetector(
                     onTap: _abrirFiltroValor,
                     child: Container(
-                      width: 34, height: 34,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
                         color: temFiltroValor
-                            ? const Color(0xFFC2463C) : Colors.white,
+                            ? const Color(0xFFC2463C)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(Icons.filter_list,
@@ -623,7 +621,7 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               SizedBox(
                 height: 28,
                 child: ListView(
@@ -670,43 +668,53 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
           ),
         ),
 
-        // ── Tabela ─────────────────────────────────────────────────────────
-        Expanded(
-          child: isVendas
-              ? AdminTabelaVendas(
-                  vendas: _paginar(vendasFiltradas),
-                  cardapio: _cardapio,
-                  fmt: fmt,
-                  fmtData: fmtData,
-                  onEditar: (v) async {
-                    await _vendaRepo.atualizarVenda(v);
-                    await _carregarDados();
-                  },
-                  onDeletar: (id) async {
-                    await _vendaRepo.deletarVenda(id);
-                    await _carregarDados();
-                  },
-                )
-              : AdminTabelaDespesas(
-                  despesas: _paginar(despesasFiltradas),
-                  fmt: fmt,
-                  fmtData: fmtData,
-                  onEditar: (d) async {
-                    await _despesaRepo.atualizarDespesa(d);
-                    await _carregarDados();
-                  },
-                  onDeletar: (id) async {
-                    await _despesaRepo.deletarDespesa(id);
-                    await _carregarDados();
-                  },
-                ),
+        // ── Divisor entre filtros e tabela ─────────────────────────────────
+        Container(
+          height: 2,
+          color: const Color(0xFFE0E0E0),
         ),
 
-        // ── Paginação compacta ─────────────────────────────────────────────
+        // ── Tabela ─────────────────────────────────────────────────────────
+        Expanded(
+          child: Container(
+            color: Colors.white,
+            child: isVendas
+                ? AdminTabelaVendas(
+                    vendas: _paginar(vendasFiltradas),
+                    cardapio: _cardapio,
+                    fmt: fmt,
+                    fmtData: fmtData,
+                    onEditar: (v) async {
+                      await _vendaRepo.atualizarVenda(v);
+                      await _carregarDados();
+                    },
+                    onDeletar: (id) async {
+                      await _vendaRepo.deletarVenda(id);
+                      await _carregarDados();
+                    },
+                  )
+                : AdminTabelaDespesas(
+                    despesas: _paginar(despesasFiltradas),
+                    fmt: fmt,
+                    fmtData: fmtData,
+                    onEditar: (d) async {
+                      await _despesaRepo.atualizarDespesa(d);
+                      await _carregarDados();
+                    },
+                    onDeletar: (id) async {
+                      await _despesaRepo.deletarDespesa(id);
+                      await _carregarDados();
+                    },
+                  ),
+          ),
+        ),
+
+        // ── Paginação ──────────────────────────────────────────────────────
         if (totalPaginas > 1)
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -714,7 +722,8 @@ class _AdminDadosAbaState extends State<AdminDadosAba>
                   '${_paginaAtual * _itensPorPagina + 1}–'
                   '${((_paginaAtual + 1) * _itensPorPagina).clamp(0, listaFiltrada.length)} '
                   'de ${listaFiltrada.length}',
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  style: const TextStyle(
+                      fontSize: 11, color: Colors.black54),
                 ),
                 Row(
                   children: [

@@ -167,31 +167,34 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
     return Column(
       children: [
         // ── Cabeçalho ──────────────────────────────────────────────────────
-        Container(
-          color: const Color(0xFFF0F0F0),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: [
-              _Cabecalho(texto: 'Data', largura: 58,
-                  coluna: _ColunaVenda.data, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              _Cabecalho(texto: 'Produto', largura: null,
-                  coluna: _ColunaVenda.produto, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              _Cabecalho(texto: 'Qtd', largura: 30,
-                  coluna: _ColunaVenda.quantidade, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              _Cabecalho(texto: 'Total', largura: 72,
-                  coluna: _ColunaVenda.total, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              const SizedBox(width: 20),
-            ],
-          ),
-        ),
+        // ── Cabeçalho ──────────────────────────────────────────────────────
+Container(
+  color: const Color(0xFF2D2D2D),
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+  child: Row(
+    children: [
+      _Cabecalho(texto: 'Data', largura: 58,
+          coluna: _ColunaVenda.data, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      _Cabecalho(texto: 'Produto', largura: null,
+          coluna: _ColunaVenda.produto, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      _Cabecalho(texto: 'Qtd', largura: 30,
+          coluna: _ColunaVenda.quantidade, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      _Cabecalho(texto: 'Total', largura: 72,
+          coluna: _ColunaVenda.total, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      const SizedBox(width: 20),
+    ],
+  ),
+),
 
         // ── Linhas ─────────────────────────────────────────────────────────
         Expanded(
-          child: ListView.builder(
+  child: ColoredBox(
+    color: Colors.white,
+    child: ListView.builder(
             itemCount: vendas.length,
             itemBuilder: (context, index) {
               final venda = vendas[index];
@@ -520,11 +523,11 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
             },
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
-
+}
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
 
 class _VendaBottomSheet extends StatelessWidget {
@@ -680,15 +683,15 @@ class _Cabecalho extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isAtiva
-                    ? const Color(0xFFC2463C) : Colors.black45,
+                color: isAtiva ? const Color(0xFFFFB300) : Colors.white70,
+                letterSpacing: 0.5,
               )),
           if (isAtiva) ...[
             const SizedBox(width: 2),
             Icon(
               ascendente ? Icons.arrow_upward : Icons.arrow_downward,
               size: 9,
-              color: const Color(0xFFC2463C),
+              color: const Color(0xFFFFB300),
             ),
           ],
         ],

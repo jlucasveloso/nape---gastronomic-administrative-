@@ -30,9 +30,15 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
       body: Column(
         children: [
           // ── Header ────────────────────────────────────────────────────────
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              _indiceAtivo == 1 ? MediaQuery.of(context).padding.top + 8 : 52,
+              16,
+              _indiceAtivo == 1 ? 8 : 20,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xFFC2463C),
               borderRadius: BorderRadius.only(
@@ -40,46 +46,70 @@ class _AdminRestauranteScreenState extends State<AdminRestauranteScreen> {
                 bottomRight: Radius.circular(24),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.arrow_back_ios,
-                          color: Colors.white70, size: 16),
-                      SizedBox(width: 4),
+            child: _indiceAtivo == 1
+                // Header mínimo — aba Dados
+                ? Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.arrow_back_ios,
+                            color: Colors.white70, size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.perfil.nomeRestaurante,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  )
+                // Header normal — outras abas
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.arrow_back_ios,
+                                color: Colors.white70, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Restaurantes',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        'Restaurantes',
-                        style: TextStyle(
+                        widget.perfil.nomeRestaurante,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.perfil.telefone,
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.perfil.nomeRestaurante,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.perfil.telefone,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
           ),
 
           // ── Conteúdo ──────────────────────────────────────────────────────

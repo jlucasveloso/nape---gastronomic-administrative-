@@ -168,28 +168,31 @@ class _AdminTabelaDespesasState extends State<AdminTabelaDespesas> {
     return Column(
       children: [
         // ── Cabeçalho ──────────────────────────────────────────────────────
-        Container(
-          color: const Color(0xFFF0F0F0),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: [
-              _Cabecalho(texto: 'Data', largura: 58,
-                  coluna: _ColunaDespesa.data, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              _Cabecalho(texto: 'Descrição', largura: null,
-                  coluna: _ColunaDespesa.descricao, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              _Cabecalho(texto: 'Valor', largura: 72,
-                  coluna: _ColunaDespesa.valor, ativa: _colunaOrdenada,
-                  ascendente: _ascendente, onTap: _ordenarPor),
-              const SizedBox(width: 20),
-            ],
-          ),
-        ),
+        // ── Cabeçalho ──────────────────────────────────────────────────────
+Container(
+  color: const Color(0xFF2D2D2D),
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+  child: Row(
+    children: [
+      _Cabecalho(texto: 'Data', largura: 58,
+          coluna: _ColunaDespesa.data, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      _Cabecalho(texto: 'Descrição', largura: null,
+          coluna: _ColunaDespesa.descricao, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      _Cabecalho(texto: 'Valor', largura: 72,
+          coluna: _ColunaDespesa.valor, ativa: _colunaOrdenada,
+          ascendente: _ascendente, onTap: _ordenarPor),
+      const SizedBox(width: 20),
+    ],
+  ),
+),
 
         // ── Linhas ─────────────────────────────────────────────────────────
         Expanded(
-          child: ListView.builder(
+  child: ColoredBox(
+    color: Colors.white,
+    child: ListView.builder(
             itemCount: despesas.length,
             itemBuilder: (context, index) {
               final despesa = despesas[index];
@@ -454,10 +457,11 @@ class _AdminTabelaDespesasState extends State<AdminTabelaDespesas> {
             },
           ),
         ),
-      ],
-    );
-  }
-}
+      ),  // ← fecha o ColoredBox
+    ],
+  );
+}  // fecha build
+}  // fecha _AdminTabelaDespesasState
 
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
 
@@ -623,15 +627,15 @@ class _Cabecalho extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isAtiva
-                    ? const Color(0xFFC2463C) : Colors.black45,
+                color: isAtiva ? const Color(0xFFFFB300) : Colors.white70,
+                letterSpacing: 0.5,
               )),
           if (isAtiva) ...[
             const SizedBox(width: 2),
             Icon(
               ascendente ? Icons.arrow_upward : Icons.arrow_downward,
               size: 9,
-              color: const Color(0xFFC2463C),
+              color: const Color(0xFFFFB300),
             ),
           ],
         ],
