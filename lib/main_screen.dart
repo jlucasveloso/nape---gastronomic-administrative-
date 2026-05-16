@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:proj_nape/app_state.dart';
 import 'package:proj_nape/features/dashboard/ui/dashboard_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/faturamento_screen.dart';
-import 'package:proj_nape/features/dashboard/ui/despesas_screen.dart';
+import 'package:proj_nape/features/despesas/ui/despesas_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/lucro_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/cardapio_screen.dart';
 import 'package:proj_nape/features/dashboard/ui/analise_screen.dart';

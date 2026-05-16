@@ -337,12 +337,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () => mainScreenKey.currentState?.trocarAba(1),
                         ),
                         const SizedBox(height: 12),
-                        InfoCard(
-                          titulo: 'Custos',
+                       InfoCard(
+                          titulo: 'Despesas',
                           valor: fmt.format(controller.custosTotal),
-                          subtitulo: '$nCategorias categorias de despesa',
+                          subtitulo: 'Funcionários, recorrentes e normais',
                           cor: const Color(0xFFC2463C),
-                          icone: Icons.trending_down,
+                          icone: Icons.receipt_long,
                           onTap: () => mainScreenKey.currentState?.trocarAba(2),
                         ),
                         const SizedBox(height: 12),
