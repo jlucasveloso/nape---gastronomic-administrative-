@@ -69,13 +69,19 @@ SUPABASE_ANON_KEY=Samuel insira aqui
 
 > Para obter as credenciais, entre em contato com algum dos membros do grupo.
 
-### 5. Instalar as dependências
+### 5. Limpar o projeto
+
+```bash
+flutter clean
+```
+
+### 6. Instalar as dependências
 
 ```bash
 flutter pub get
 ```
 
-### 6. Rodar o projeto
+### 7. Rodar o projeto
 
 ```bash
 flutter run
