@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:proj_nape/features/dashboard/model/produto_cardapio.dart';
 import 'package:proj_nape/features/dashboard/model/venda.dart';
+import 'package:proj_nape/shared/widgets/campo_monetario.dart';
 import 'package:intl/intl.dart';
 
 enum _ColunaVenda { data, produto, quantidade, total }
@@ -34,18 +35,17 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
 
   final _nomeController = TextEditingController();
   final _categoriaController = TextEditingController();
-  final _precoController = TextEditingController();
   final _quantidadeController = TextEditingController();
   DateTime? _dataEditando;
   ProdutoCardapio? _produtoSelecionado;
   bool _mostrandoBuscaProduto = false;
   String _termoBusca = '';
+  double _precoEditando = 0.0;
 
   @override
   void dispose() {
     _nomeController.dispose();
     _categoriaController.dispose();
-    _precoController.dispose();
     _quantidadeController.dispose();
     super.dispose();
   }
@@ -88,28 +88,26 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
         _expandidoId = venda.id;
         _nomeController.text = venda.nomeProdutoSnapshot;
         _categoriaController.text = venda.categoriaSnapshot;
-        _precoController.text = venda.precoUnitarioSnapshot.toStringAsFixed(2);
         _quantidadeController.text = venda.quantidade.toString();
         _dataEditando = venda.data;
         _produtoSelecionado = null;
         _mostrandoBuscaProduto = false;
         _termoBusca = '';
+        _precoEditando = venda.precoUnitarioSnapshot;
       }
     });
   }
 
   Future<void> _salvar(Venda original) async {
-    final preco = double.tryParse(
-        _precoController.text.trim().replaceAll(',', '.'));
     final quantidade = int.tryParse(_quantidadeController.text.trim());
-    if (preco == null || quantidade == null) return;
+    if (_precoEditando <= 0 || quantidade == null) return;
 
     await widget.onEditar(Venda(
       id: original.id,
       produtoId: _produtoSelecionado?.id ?? original.produtoId,
       nomeProdutoSnapshot: _nomeController.text.trim(),
       categoriaSnapshot: _categoriaController.text.trim(),
-      precoUnitarioSnapshot: preco,
+      precoUnitarioSnapshot: _precoEditando,
       quantidade: quantidade,
       data: _dataEditando ?? original.data,
     ));
@@ -166,368 +164,381 @@ class _AdminTabelaVendasState extends State<AdminTabelaVendas> {
 
     return Column(
       children: [
-        // ── Cabeçalho ──────────────────────────────────────────────────────
-        // ── Cabeçalho ──────────────────────────────────────────────────────
-Container(
-  color: const Color(0xFF2D2D2D),
-  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-  child: Row(
-    children: [
-      _Cabecalho(texto: 'Data', largura: 58,
-          coluna: _ColunaVenda.data, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      _Cabecalho(texto: 'Produto', largura: null,
-          coluna: _ColunaVenda.produto, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      _Cabecalho(texto: 'Qtd', largura: 30,
-          coluna: _ColunaVenda.quantidade, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      _Cabecalho(texto: 'Total', largura: 72,
-          coluna: _ColunaVenda.total, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      const SizedBox(width: 20),
-    ],
-  ),
-),
-
-        // ── Linhas ─────────────────────────────────────────────────────────
-        Expanded(
-  child: ColoredBox(
-    color: Colors.white,
-    child: ListView.builder(
-            itemCount: vendas.length,
-            itemBuilder: (context, index) {
-              final venda = vendas[index];
-              final expandido = _expandidoId == venda.id;
-              final par = index % 2 == 0;
-
-              return Column(
-                children: [
-                  // Linha compacta
-                  GestureDetector(
-                    onTap: () => _expandir(venda),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: expandido
-                            ? const Color(0xFFFFF0F0)
-                            : par
-                                ? Colors.white
-                                : const Color(0xFFFAFAFA),
-                        border: Border(
-                          left: expandido
-                              ? const BorderSide(
-                                  color: Color(0xFFC2463C), width: 3)
-                              : BorderSide.none,
-                          bottom: BorderSide(
-                              color: Colors.grey.shade200, width: 1),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 58,
-                            child: Text(
-                              widget.fmtData.format(venda.data),
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.black45),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              venda.nomeProdutoSnapshot,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(
-                            width: 30,
-                            child: Text('${venda.quantidade}x',
-                                style: const TextStyle(
-                                    fontSize: 11, color: Colors.black45)),
-                          ),
-                          SizedBox(
-                            width: 72,
-                            child: Text(
-                              widget.fmt.format(venda.valorTotal),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2D74C4),
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            expandido
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            size: 16,
-                            color: Colors.black26,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Expansão inline editável
-                  if (expandido)
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFF0F0),
-                        border: Border(
-                          left: BorderSide(
-                              color: Color(0xFFC2463C), width: 3),
-                        ),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Data
-                          GestureDetector(
-                            onTap: () => _selecionarData(context),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                    color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.calendar_today,
-                                      size: 12,
-                                      color: Color(0xFFC2463C)),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    widget.fmtData.format(
-                                        _dataEditando ?? venda.data),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Busca produto
-                          GestureDetector(
-                            onTap: () => setState(() {
-                              _mostrandoBuscaProduto =
-                                  !_mostrandoBuscaProduto;
-                              _termoBusca = '';
-                            }),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: _mostrandoBuscaProduto
-                                      ? const Color(0xFFC2463C)
-                                      : Colors.grey.shade300,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.search,
-                                      size: 14, color: Colors.black38),
-                                  const SizedBox(width: 5),
-                                  Expanded(
-                                    child: Text(
-                                      _nomeController.text.isEmpty
-                                          ? 'Selecionar produto...'
-                                          : _nomeController.text,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: _nomeController.text.isEmpty
-                                            ? Colors.black38
-                                            : Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    _mostrandoBuscaProduto
-                                        ? Icons.keyboard_arrow_up
-                                        : Icons.keyboard_arrow_down,
-                                    size: 14,
-                                    color: Colors.black38,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          if (_mostrandoBuscaProduto) ...[
-                            const SizedBox(height: 4),
-                            TextField(
-                              autofocus: true,
-                              onChanged: (v) =>
-                                  setState(() => _termoBusca = v),
-                              style: const TextStyle(fontSize: 12),
-                              decoration: InputDecoration(
-                                hintText: 'Buscar no cardápio...',
-                                hintStyle: const TextStyle(
-                                    fontSize: 12, color: Colors.black38),
-                                prefixIcon: const Icon(Icons.search,
-                                    size: 14, color: Colors.black38),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: EdgeInsets.zero,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(
-                                      color: Colors.grey.shade300),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              constraints:
-                                  const BoxConstraints(maxHeight: 120),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                    color: Colors.grey.shade200),
-                              ),
-                              child: ListView(
-                                shrinkWrap: true,
-                                children: widget.cardapio
-                                    .where((p) =>
-                                        p.nome.toLowerCase().contains(
-                                            _termoBusca.toLowerCase()) ||
-                                        p.categoria.toLowerCase().contains(
-                                            _termoBusca.toLowerCase()))
-                                    .map((p) => ListTile(
-                                          dense: true,
-                                          title: Text(p.nome,
-                                              style: const TextStyle(
-                                                  fontSize: 12)),
-                                          subtitle: Text(p.categoria,
-                                              style: const TextStyle(
-                                                  fontSize: 11)),
-                                          trailing: Text(
-                                            widget.fmt.format(p.preco),
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF3E8E41),
-                                            ),
-                                          ),
-                                          onTap: () => setState(() {
-                                            _produtoSelecionado = p;
-                                            _nomeController.text = p.nome;
-                                            _categoriaController.text =
-                                                p.categoria;
-                                            _precoController.text =
-                                                p.preco.toStringAsFixed(2);
-                                            _mostrandoBuscaProduto = false;
-                                            _termoBusca = '';
-                                          }),
-                                        ))
-                                    .toList(),
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _Campo(
-                                  label: 'Qtd',
-                                  controller: _quantidadeController,
-                                  teclado: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _Campo(
-                                  label: 'Preço unit.',
-                                  controller: _precoController,
-                                  teclado: const TextInputType
-                                      .numberWithOptions(decimal: true),
-                                  prefixo: 'R\$ ',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton(
-                                onPressed: () =>
-                                    _abrirBottomSheet(context, venda),
-                                style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero),
-                                child: const Text('Ver mais',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black45)),
-                              ),
-                              Row(
-                                children: [
-                                  TextButton(
-                                    onPressed: () => setState(
-                                        () => _expandidoId = null),
-                                    style: TextButton.styleFrom(
-                                        padding: EdgeInsets.zero),
-                                    child: const Text('Cancelar',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black45)),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  SizedBox(
-                                    height: 30,
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFFC2463C),
-                                        padding: const EdgeInsets
-                                            .symmetric(horizontal: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                      ),
-                                      onPressed: () => _salvar(venda),
-                                      child: const Text('Salvar',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white)),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              );
-            },
+        Container(
+          color: const Color(0xFF2D2D2D),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            children: [
+              _Cabecalho(texto: 'Data', largura: 58,
+                  coluna: _ColunaVenda.data, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Produto', largura: null,
+                  coluna: _ColunaVenda.produto, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Qtd', largura: 30,
+                  coluna: _ColunaVenda.quantidade, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Total', largura: 72,
+                  coluna: _ColunaVenda.total, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              const SizedBox(width: 20),
+            ],
           ),
         ),
-      ),
-    ],
-  );
+
+        Expanded(
+          child: ColoredBox(
+            color: Colors.white,
+            child: ListView.builder(
+              itemCount: vendas.length,
+              itemBuilder: (context, index) {
+                final venda = vendas[index];
+                final expandido = _expandidoId == venda.id;
+                final par = index % 2 == 0;
+
+                return Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _expandir(venda),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: expandido
+                              ? const Color(0xFFFFF0F0)
+                              : par ? Colors.white : const Color(0xFFFAFAFA),
+                          border: Border(
+                            left: expandido
+                                ? const BorderSide(
+                                    color: Color(0xFFC2463C), width: 3)
+                                : BorderSide.none,
+                            bottom: BorderSide(
+                                color: Colors.grey.shade200, width: 1),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 58,
+                              child: Text(
+                                widget.fmtData.format(venda.data),
+                                style: const TextStyle(
+                                    fontSize: 11, color: Colors.black45),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                venda.nomeProdutoSnapshot,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black87),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 30,
+                              child: Text('${venda.quantidade}x',
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Colors.black45)),
+                            ),
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                widget.fmt.format(venda.valorTotal),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D74C4),
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              expandido
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              size: 16,
+                              color: Colors.black26,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    if (expandido)
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFF0F0),
+                          border: Border(
+                            left: BorderSide(
+                                color: Color(0xFFC2463C), width: 3),
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () => _selecionarData(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: Colors.grey.shade300),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.calendar_today,
+                                        size: 12,
+                                        color: Color(0xFFC2463C)),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      widget.fmtData.format(
+                                          _dataEditando ?? venda.data),
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Busca produto
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _mostrandoBuscaProduto =
+                                    !_mostrandoBuscaProduto;
+                                _termoBusca = '';
+                              }),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: _mostrandoBuscaProduto
+                                        ? const Color(0xFFC2463C)
+                                        : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.search,
+                                        size: 14, color: Colors.black38),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        _nomeController.text.isEmpty
+                                            ? 'Selecionar produto...'
+                                            : _nomeController.text,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: _nomeController.text.isEmpty
+                                              ? Colors.black38
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      _mostrandoBuscaProduto
+                                          ? Icons.keyboard_arrow_up
+                                          : Icons.keyboard_arrow_down,
+                                      size: 14,
+                                      color: Colors.black38,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            if (_mostrandoBuscaProduto) ...[
+                              const SizedBox(height: 4),
+                              TextField(
+                                autofocus: true,
+                                onChanged: (v) =>
+                                    setState(() => _termoBusca = v),
+                                style: const TextStyle(fontSize: 12),
+                                decoration: InputDecoration(
+                                  hintText: 'Buscar no cardápio...',
+                                  hintStyle: const TextStyle(
+                                      fontSize: 12, color: Colors.black38),
+                                  prefixIcon: const Icon(Icons.search,
+                                      size: 14, color: Colors.black38),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: EdgeInsets.zero,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: BorderSide(
+                                        color: Colors.grey.shade300),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                constraints:
+                                    const BoxConstraints(maxHeight: 120),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: Colors.grey.shade200),
+                                ),
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  children: widget.cardapio
+                                      .where((p) =>
+                                          p.nome.toLowerCase().contains(
+                                              _termoBusca.toLowerCase()) ||
+                                          p.categoria.toLowerCase().contains(
+                                              _termoBusca.toLowerCase()))
+                                      .map((p) => ListTile(
+                                            dense: true,
+                                            title: Text(p.nome,
+                                                style: const TextStyle(
+                                                    fontSize: 12)),
+                                            subtitle: Text(p.categoria,
+                                                style: const TextStyle(
+                                                    fontSize: 11)),
+                                            trailing: Text(
+                                              widget.fmt.format(p.preco),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF3E8E41),
+                                              ),
+                                            ),
+                                            onTap: () => setState(() {
+                                              _produtoSelecionado = p;
+                                              _nomeController.text = p.nome;
+                                              _categoriaController.text =
+                                                  p.categoria;
+                                              _precoEditando = p.preco;
+                                              _mostrandoBuscaProduto = false;
+                                              _termoBusca = '';
+                                            }),
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _Campo(
+                                    label: 'Qtd',
+                                    controller: _quantidadeController,
+                                    teclado: TextInputType.number,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: CampoMonetario(
+                                    label: 'Preço unit.',
+                                    valorInicial: venda.precoUnitarioSnapshot,
+                                    onChanged: (v) => _precoEditando = v,
+                                    decoration: InputDecoration(
+                                      labelText: 'Preço unit.',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      labelStyle: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black45),
+                                      border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFC2463C)),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 6),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton(
+                                  onPressed: () =>
+                                      _abrirBottomSheet(context, venda),
+                                  style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero),
+                                  child: const Text('Ver mais',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.black45)),
+                                ),
+                                Row(
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => setState(
+                                          () => _expandidoId = null),
+                                      style: TextButton.styleFrom(
+                                          padding: EdgeInsets.zero),
+                                      child: const Text('Cancelar',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black45)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      height: 30,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFFC2463C),
+                                          padding: const EdgeInsets
+                                              .symmetric(horizontal: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                        ),
+                                        onPressed: () => _salvar(venda),
+                                        child: const Text('Salvar',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.white)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
-}
+
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
 
 class _VendaBottomSheet extends StatelessWidget {
@@ -603,7 +614,8 @@ class _VendaBottomSheet extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
         title: const Text('Deletar venda'),
         content: Text(
             'Deseja deletar a venda de "${venda.nomeProdutoSnapshot}"?\nEsta ação não pode ser desfeita.'),
@@ -683,7 +695,8 @@ class _Cabecalho extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isAtiva ? const Color(0xFFFFB300) : Colors.white70,
+                color: isAtiva
+                    ? const Color(0xFFFFB300) : Colors.white70,
                 letterSpacing: 0.5,
               )),
           if (isAtiva) ...[

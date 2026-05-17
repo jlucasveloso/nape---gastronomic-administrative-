@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:proj_nape/features/dashboard/model/despesa.dart';
+import 'package:proj_nape/shared/widgets/campo_monetario.dart';
 import 'package:intl/intl.dart';
 
 enum _ColunaDespesa { data, descricao, categoria, valor }
@@ -31,10 +32,10 @@ class _AdminTabelaDespesasState extends State<AdminTabelaDespesas> {
 
   final _descricaoController = TextEditingController();
   final _categoriaController = TextEditingController();
-  final _valorController = TextEditingController();
   final _observacaoController = TextEditingController();
   DateTime? _dataEditando;
   String _tipoEditando = 'outros';
+  double _valorEditando = 0.0;
 
   final _tipos = {
     'ingredientes': 'Ingredientes',
@@ -48,7 +49,6 @@ class _AdminTabelaDespesasState extends State<AdminTabelaDespesas> {
   void dispose() {
     _descricaoController.dispose();
     _categoriaController.dispose();
-    _valorController.dispose();
     _observacaoController.dispose();
     super.dispose();
   }
@@ -91,24 +91,22 @@ class _AdminTabelaDespesasState extends State<AdminTabelaDespesas> {
         _expandidoId = despesa.id;
         _descricaoController.text = despesa.descricao;
         _categoriaController.text = despesa.categoria;
-        _valorController.text = despesa.valor.toStringAsFixed(2);
         _observacaoController.text = despesa.observacao ?? '';
         _dataEditando = despesa.data;
         _tipoEditando = despesa.tipo;
+        _valorEditando = despesa.valor;
       }
     });
   }
 
   Future<void> _salvar(Despesa original) async {
-    final valor = double.tryParse(
-        _valorController.text.trim().replaceAll(',', '.'));
-    if (valor == null) return;
+    if (_valorEditando <= 0) return;
 
     await widget.onEditar(Despesa(
       id: original.id,
       descricao: _descricaoController.text.trim(),
       categoria: _categoriaController.text.trim(),
-      valor: valor,
+      valor: _valorEditando,
       data: _dataEditando ?? original.data,
       observacao: _observacaoController.text.trim().isEmpty
           ? null : _observacaoController.text.trim(),
@@ -167,301 +165,312 @@ class _AdminTabelaDespesasState extends State<AdminTabelaDespesas> {
 
     return Column(
       children: [
-        // ── Cabeçalho ──────────────────────────────────────────────────────
-        // ── Cabeçalho ──────────────────────────────────────────────────────
-Container(
-  color: const Color(0xFF2D2D2D),
-  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-  child: Row(
-    children: [
-      _Cabecalho(texto: 'Data', largura: 58,
-          coluna: _ColunaDespesa.data, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      _Cabecalho(texto: 'Descrição', largura: null,
-          coluna: _ColunaDespesa.descricao, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      _Cabecalho(texto: 'Valor', largura: 72,
-          coluna: _ColunaDespesa.valor, ativa: _colunaOrdenada,
-          ascendente: _ascendente, onTap: _ordenarPor),
-      const SizedBox(width: 20),
-    ],
-  ),
-),
+        Container(
+          color: const Color(0xFF2D2D2D),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            children: [
+              _Cabecalho(texto: 'Data', largura: 58,
+                  coluna: _ColunaDespesa.data, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Descrição', largura: null,
+                  coluna: _ColunaDespesa.descricao, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              _Cabecalho(texto: 'Valor', largura: 72,
+                  coluna: _ColunaDespesa.valor, ativa: _colunaOrdenada,
+                  ascendente: _ascendente, onTap: _ordenarPor),
+              const SizedBox(width: 20),
+            ],
+          ),
+        ),
 
-        // ── Linhas ─────────────────────────────────────────────────────────
         Expanded(
-  child: ColoredBox(
-    color: Colors.white,
-    child: ListView.builder(
-            itemCount: despesas.length,
-            itemBuilder: (context, index) {
-              final despesa = despesas[index];
-              final expandido = _expandidoId == despesa.id;
-              final par = index % 2 == 0;
+          child: ColoredBox(
+            color: Colors.white,
+            child: ListView.builder(
+              itemCount: despesas.length,
+              itemBuilder: (context, index) {
+                final despesa = despesas[index];
+                final expandido = _expandidoId == despesa.id;
+                final par = index % 2 == 0;
 
-              return Column(
-                children: [
-                  // Linha compacta
-                  GestureDetector(
-                    onTap: () => _expandir(despesa),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: expandido
-                            ? const Color(0xFFFFF0F0)
-                            : par
-                                ? Colors.white
-                                : const Color(0xFFFAFAFA),
-                        border: Border(
-                          left: expandido
-                              ? const BorderSide(
-                                  color: Color(0xFFC2463C), width: 3)
-                              : BorderSide.none,
-                          bottom: BorderSide(
-                              color: Colors.grey.shade200, width: 1),
+                return Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _expandir(despesa),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: expandido
+                              ? const Color(0xFFFFF0F0)
+                              : par ? Colors.white : const Color(0xFFFAFAFA),
+                          border: Border(
+                            left: expandido
+                                ? const BorderSide(
+                                    color: Color(0xFFC2463C), width: 3)
+                                : BorderSide.none,
+                            bottom: BorderSide(
+                                color: Colors.grey.shade200, width: 1),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 58,
+                              child: Text(
+                                widget.fmtData.format(despesa.data),
+                                style: const TextStyle(
+                                    fontSize: 11, color: Colors.black45),
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    despesa.descricao,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    despesa.categoria,
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Colors.black38),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                widget.fmt.format(despesa.valor),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFC2463C),
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              expandido
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              size: 16,
+                              color: Colors.black26,
+                            ),
+                          ],
                         ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 58,
-                            child: Text(
-                              widget.fmtData.format(despesa.data),
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.black45),
-                            ),
+                    ),
+
+                    if (expandido)
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFF0F0),
+                          border: Border(
+                            left: BorderSide(
+                                color: Color(0xFFC2463C), width: 3),
                           ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  despesa.descricao,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black87),
-                                  overflow: TextOverflow.ellipsis,
+                        ),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () => _selecionarData(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: Colors.grey.shade300),
                                 ),
-                                Text(
-                                  despesa.categoria,
-                                  style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black38),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.calendar_today,
+                                        size: 12, color: Color(0xFFC2463C)),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      widget.fmtData.format(
+                                          _dataEditando ?? despesa.data),
+                                      style:
+                                          const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            _Campo(
+                              label: 'Descrição',
+                              controller: _descricaoController,
+                            ),
+                            const SizedBox(height: 6),
+
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _Campo(
+                                    label: 'Categoria',
+                                    controller: _categoriaController,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: CampoMonetario(
+                                    label: 'Valor',
+                                    valorInicial: despesa.valor,
+                                    onChanged: (v) => _valorEditando = v,
+                                    decoration: InputDecoration(
+                                      labelText: 'Valor',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      labelStyle: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black45),
+                                      border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFC2463C)),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 6),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          SizedBox(
-                            width: 72,
-                            child: Text(
-                              widget.fmt.format(despesa.valor),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFC2463C),
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            expandido
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            size: 16,
-                            color: Colors.black26,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                            const SizedBox(height: 8),
 
-                  // Expansão inline editável
-                  if (expandido)
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFF0F0),
-                        border: Border(
-                          left: BorderSide(
-                              color: Color(0xFFC2463C), width: 3),
-                        ),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Data
-                          GestureDetector(
-                            onTap: () => _selecionarData(context),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                    color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.calendar_today,
-                                      size: 12,
-                                      color: Color(0xFFC2463C)),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    widget.fmtData.format(
-                                        _dataEditando ?? despesa.data),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          _Campo(
-                            label: 'Descrição',
-                            controller: _descricaoController,
-                          ),
-                          const SizedBox(height: 6),
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _Campo(
-                                  label: 'Categoria',
-                                  controller: _categoriaController,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _Campo(
-                                  label: 'Valor',
-                                  controller: _valorController,
-                                  teclado: const TextInputType
-                                      .numberWithOptions(decimal: true),
-                                  prefixo: 'R\$ ',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Tipo
-                          const Text('Tipo',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.black45)),
-                          const SizedBox(height: 5),
-                          Wrap(
-                            spacing: 5,
-                            runSpacing: 5,
-                            children: _tipos.entries.map((entry) {
-                              final sel = entry.key == _tipoEditando;
-                              return GestureDetector(
-                                onTap: () => setState(
-                                    () => _tipoEditando = entry.key),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: sel
-                                        ? const Color(0xFFC2463C)
-                                        : Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(14),
-                                    border: Border.all(
+                            const Text('Tipo',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.black45)),
+                            const SizedBox(height: 5),
+                            Wrap(
+                              spacing: 5,
+                              runSpacing: 5,
+                              children: _tipos.entries.map((entry) {
+                                final sel = entry.key == _tipoEditando;
+                                return GestureDetector(
+                                  onTap: () => setState(
+                                      () => _tipoEditando = entry.key),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
                                       color: sel
                                           ? const Color(0xFFC2463C)
-                                          : Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  child: Text(entry.value,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
+                                          : Colors.white,
+                                      borderRadius:
+                                          BorderRadius.circular(14),
+                                      border: Border.all(
                                         color: sel
-                                            ? Colors.white
-                                            : Colors.black54,
-                                      )),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 6),
-
-                          _Campo(
-                            label: 'Observação (opcional)',
-                            controller: _observacaoController,
-                          ),
-                          const SizedBox(height: 10),
-
-                          Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton(
-                                onPressed: () =>
-                                    _abrirBottomSheet(context, despesa),
-                                style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero),
-                                child: const Text('Ver mais',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black45)),
-                              ),
-                              Row(
-                                children: [
-                                  TextButton(
-                                    onPressed: () => setState(
-                                        () => _expandidoId = null),
-                                    style: TextButton.styleFrom(
-                                        padding: EdgeInsets.zero),
-                                    child: const Text('Cancelar',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black45)),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  SizedBox(
-                                    height: 30,
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFFC2463C),
-                                        padding: const EdgeInsets
-                                            .symmetric(horizontal: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
+                                            ? const Color(0xFFC2463C)
+                                            : Colors.grey.shade300,
                                       ),
-                                      onPressed: () => _salvar(despesa),
-                                      child: const Text('Salvar',
+                                    ),
+                                    child: Text(entry.value,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: sel
+                                              ? Colors.white
+                                              : Colors.black54,
+                                        )),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 6),
+
+                            _Campo(
+                              label: 'Observação (opcional)',
+                              controller: _observacaoController,
+                            ),
+                            const SizedBox(height: 10),
+
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton(
+                                  onPressed: () =>
+                                      _abrirBottomSheet(context, despesa),
+                                  style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero),
+                                  child: const Text('Ver mais',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.black45)),
+                                ),
+                                Row(
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => setState(
+                                          () => _expandidoId = null),
+                                      style: TextButton.styleFrom(
+                                          padding: EdgeInsets.zero),
+                                      child: const Text('Cancelar',
                                           style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.white)),
+                                              color: Colors.black45)),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      height: 30,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFFC2463C),
+                                          padding: const EdgeInsets
+                                              .symmetric(horizontal: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                        ),
+                                        onPressed: () => _salvar(despesa),
+                                        child: const Text('Salvar',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.white)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ),  // ← fecha o ColoredBox
-    ],
-  );
-}  // fecha build
-}  // fecha _AdminTabelaDespesasState
+      ],
+    );
+  }
+}
 
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
 
@@ -547,7 +556,8 @@ class _DespesaBottomSheet extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
         title: const Text('Deletar despesa'),
         content: Text(
             'Deseja deletar "${despesa.descricao}"?\nEsta ação não pode ser desfeita.'),
@@ -627,7 +637,8 @@ class _Cabecalho extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isAtiva ? const Color(0xFFFFB300) : Colors.white70,
+                color: isAtiva
+                    ? const Color(0xFFFFB300) : Colors.white70,
                 letterSpacing: 0.5,
               )),
           if (isAtiva) ...[

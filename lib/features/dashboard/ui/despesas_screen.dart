@@ -8,6 +8,8 @@ import 'package:proj_nape/features/dashboard/model/funcionario.dart';
 import 'package:proj_nape/features/dashboard/model/pagamento_funcionario.dart';
 import 'package:proj_nape/main_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import 'package:proj_nape/shared/widgets/campo_monetario.dart';
 
 class DespesasScreen extends StatefulWidget {
   const DespesasScreen({super.key});
@@ -66,7 +68,6 @@ class _DespesasScreenState extends State<DespesasScreen>
       backgroundColor: const Color(0xFFE9E4DF),
       body: Column(
         children: [
-          // ── Header ──────────────────────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 0),
@@ -103,8 +104,6 @@ class _DespesasScreenState extends State<DespesasScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // ── Abas ──────────────────────────────────────────────────
                 TabBar(
                   controller: _tabController,
                   indicatorColor: Colors.white,
@@ -125,8 +124,6 @@ class _DespesasScreenState extends State<DespesasScreen>
               ],
             ),
           ),
-
-          // ── Conteúdo ────────────────────────────────────────────────────
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -139,8 +136,6 @@ class _DespesasScreenState extends State<DespesasScreen>
           ),
         ],
       ),
-
-      // ── FAB ───────────────────────────────────────────────────────────────
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFFC2463C),
         onPressed: () => _abrirModal(context),
@@ -237,7 +232,6 @@ class _AbaComunsState extends State<_AbaComuns> {
 
     return Column(
       children: [
-        // Filtro categoria
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: SingleChildScrollView(
@@ -253,9 +247,7 @@ class _AbaComunsState extends State<_AbaComuns> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: sel
-                            ? const Color(0xFFC2463C)
-                            : Colors.white,
+                        color: sel ? const Color(0xFFC2463C) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: sel
@@ -278,10 +270,7 @@ class _AbaComunsState extends State<_AbaComuns> {
             ),
           ),
         ),
-
         const SizedBox(height: 16),
-
-        // Lista
         Expanded(
           child: despesas.isEmpty
               ? _EstadoVazio(
@@ -361,7 +350,6 @@ class _AbaRecorrentes extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Ícone status
               Container(
                 width: 44,
                 height: 44,
@@ -380,8 +368,6 @@ class _AbaRecorrentes extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Informações
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,8 +391,6 @@ class _AbaRecorrentes extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Botão registrar/pago
               if (!pago)
                 GestureDetector(
                   onTap: () => _registrarPagamento(context, recorrente, fmt),
@@ -507,10 +491,8 @@ class _AbaFuncionarios extends StatelessWidget {
                 p.competencia == competencia &&
                 p.status != 'cancelado')
             .toList();
-        final totalPago =
-            pagamentosMes.fold(0.0, (s, p) => s + p.valor);
-        final temPendente = pagamentosMes
-            .any((p) => p.status == 'pendente');
+        final totalPago = pagamentosMes.fold(0.0, (s, p) => s + p.valor);
+        final temPendente = pagamentosMes.any((p) => p.status == 'pendente');
 
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -528,7 +510,6 @@ class _AbaFuncionarios extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Avatar
               Container(
                 width: 44,
                 height: 44,
@@ -543,8 +524,6 @@ class _AbaFuncionarios extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Informações
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,8 +557,6 @@ class _AbaFuncionarios extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Status pagamento
               if (temPendente)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -597,7 +574,6 @@ class _AbaFuncionarios extends StatelessWidget {
                     ),
                   ),
                 ),
-
               const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert,
@@ -660,8 +636,8 @@ class _ModalDespesaComum extends StatefulWidget {
 class _ModalDespesaComumState extends State<_ModalDespesaComum> {
   final _descricaoController = TextEditingController();
   final _categoriaController = TextEditingController();
-  final _valorController = TextEditingController();
   String _tipoSelecionado = 'outros';
+  double _valor = 0.0;
   bool _salvando = false;
 
   final _tipos = {
@@ -676,17 +652,14 @@ class _ModalDespesaComumState extends State<_ModalDespesaComum> {
   void dispose() {
     _descricaoController.dispose();
     _categoriaController.dispose();
-    _valorController.dispose();
     super.dispose();
   }
 
   Future<void> _salvar() async {
     final descricao = _descricaoController.text.trim();
     final categoria = _categoriaController.text.trim();
-    final valor = double.tryParse(
-        _valorController.text.trim().replaceAll(',', '.'));
 
-    if (descricao.isEmpty || categoria.isEmpty || valor == null) return;
+    if (descricao.isEmpty || categoria.isEmpty || _valor <= 0) return;
 
     setState(() => _salvando = true);
     try {
@@ -695,7 +668,7 @@ class _ModalDespesaComumState extends State<_ModalDespesaComum> {
               id: '',
               descricao: descricao,
               categoria: categoria,
-              valor: valor,
+              valor: _valor,
               data: DateTime.now(),
               tipo: _tipoSelecionado,
             ),
@@ -749,8 +722,6 @@ class _ModalDespesaComumState extends State<_ModalDespesaComum> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Tipo
             const Text(
               'Tipo',
               style: TextStyle(
@@ -777,9 +748,7 @@ class _ModalDespesaComumState extends State<_ModalDespesaComum> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
-                      color: sel
-                          ? const Color(0xFFC2463C)
-                          : Colors.white,
+                      color: sel ? const Color(0xFFC2463C) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: sel
@@ -799,12 +768,11 @@ class _ModalDespesaComumState extends State<_ModalDespesaComum> {
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 12),
-            _campo('Valor', _valorController,
-                hint: '0,00',
-                teclado:
-                    const TextInputType.numberWithOptions(decimal: true)),
+            CampoMonetario(
+              label: 'Valor',
+              onChanged: (v) => _valor = v,
+            ),
             const SizedBox(height: 24),
             _botaoSalvar(_salvando, _salvar, 'Registrar despesa'),
             const SizedBox(height: 8),
@@ -824,41 +792,54 @@ class _ModalRecorrente extends StatefulWidget {
 
 class _ModalRecorrenteState extends State<_ModalRecorrente> {
   final _descricaoController = TextEditingController();
-  final _valorController = TextEditingController();
   final _diaController = TextEditingController();
+  double _valor = 0.0;
   bool _salvando = false;
+  String? _erro;
 
   @override
   void dispose() {
     _descricaoController.dispose();
-    _valorController.dispose();
     _diaController.dispose();
     super.dispose();
   }
 
   Future<void> _salvar() async {
     final descricao = _descricaoController.text.trim();
-    final valor = double.tryParse(
-        _valorController.text.trim().replaceAll(',', '.'));
     final dia = int.tryParse(_diaController.text.trim());
 
-    if (descricao.isEmpty || valor == null || dia == null ||
-        dia < 1 || dia > 31) return;
+    if (descricao.isEmpty) {
+      setState(() => _erro = 'Informe a descrição');
+      return;
+    }
+    if (_valor <= 0) {
+      setState(() => _erro = 'Informe um valor válido');
+      return;
+    }
+    if (dia == null || dia < 1 || dia > 31) {
+      setState(() => _erro = 'Dia de vencimento deve ser entre 1 e 31');
+      return;
+    }
 
-    setState(() => _salvando = true);
+    setState(() {
+      _salvando = true;
+      _erro = null;
+    });
+
     try {
       await context.read<AppState>().adicionarRecorrente(
             DespesaRecorrente(
               id: '',
               userId: '',
               descricao: descricao,
-              valorReferencia: valor,
+              valorReferencia: _valor,
               diaVencimento: dia,
               createdAt: DateTime.now(),
             ),
           );
       if (mounted) Navigator.pop(context);
     } catch (e) {
+      setState(() => _erro = 'Erro ao salvar. Tente novamente.');
       debugPrint('Erro ao salvar recorrente: $e');
     } finally {
       if (mounted) setState(() => _salvando = false);
@@ -883,27 +864,54 @@ class _ModalRecorrenteState extends State<_ModalRecorrente> {
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87)),
+            const SizedBox(height: 6),
+            const Text(
+              'O valor padrão será sugerido todo mês ao registrar o pagamento.',
+              style: TextStyle(fontSize: 12, color: Colors.black38),
+            ),
             const SizedBox(height: 20),
-            _campo('Descrição', _descricaoController,
-                hint: 'Ex: Aluguel'),
+            _campo('Descrição', _descricaoController, hint: 'Ex: Aluguel'),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                  child: _campo('Valor de referência', _valorController,
-                      hint: '0,00',
-                      teclado:
-                          TextInputType.numberWithOptions(decimal: true)),
+                  child: CampoMonetario(
+                    label: 'Valor padrão',
+                    onChanged: (v) => _valor = v,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 100,
-                  child: _campo('Dia venc.', _diaController,
-                      hint: '1–31',
-                      teclado: TextInputType.number),
+                  child: TextField(
+                    controller: _diaController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
+                    decoration: _inputDecoration('Dia venc.', hint: '1–31'),
+                  ),
                 ),
               ],
             ),
+            if (_erro != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 14, color: Color(0xFFC2463C)),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      _erro!,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFFC2463C)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             _botaoSalvar(_salvando, _salvar, 'Adicionar recorrente'),
             const SizedBox(height: 8),
@@ -932,26 +940,17 @@ class _ModalRegistrarRecorrente extends StatefulWidget {
 
 class _ModalRegistrarRecorrenteState
     extends State<_ModalRegistrarRecorrente> {
-  late final TextEditingController _valorController;
+  late double _valor;
   bool _salvando = false;
 
   @override
   void initState() {
     super.initState();
-    _valorController = TextEditingController(
-        text: widget.recorrente.valorReferencia.toStringAsFixed(2));
-  }
-
-  @override
-  void dispose() {
-    _valorController.dispose();
-    super.dispose();
+    _valor = widget.recorrente.valorReferencia;
   }
 
   Future<void> _salvar() async {
-    final valor = double.tryParse(
-        _valorController.text.trim().replaceAll(',', '.'));
-    if (valor == null) return;
+    if (_valor <= 0) return;
 
     setState(() => _salvando = true);
     try {
@@ -960,7 +959,7 @@ class _ModalRegistrarRecorrenteState
               id: '',
               despesaRecorrenteId: widget.recorrente.id,
               userId: '',
-              valor: valor,
+              valor: _valor,
               competencia: widget.competencia,
               registradoEm: DateTime.now(),
             ),
@@ -994,9 +993,11 @@ class _ModalRegistrarRecorrenteState
                   color: Colors.black87),
             ),
             const SizedBox(height: 20),
-            _campo('Valor pago', _valorController,
-                hint: '0,00',
-                teclado: TextInputType.numberWithOptions(decimal: true)),
+            CampoMonetario(
+              label: 'Valor pago',
+              valorInicial: widget.recorrente.valorReferencia,
+              onChanged: (v) => _valor = v,
+            ),
             const SizedBox(height: 24),
             _botaoSalvar(_salvando, _salvar, 'Confirmar pagamento'),
             const SizedBox(height: 8),
@@ -1017,24 +1018,21 @@ class _ModalFuncionario extends StatefulWidget {
 class _ModalFuncionarioState extends State<_ModalFuncionario> {
   final _nomeController = TextEditingController();
   final _cargoController = TextEditingController();
-  final _salarioController = TextEditingController();
+  double _salario = 0.0;
   bool _salvando = false;
 
   @override
   void dispose() {
     _nomeController.dispose();
     _cargoController.dispose();
-    _salarioController.dispose();
     super.dispose();
   }
 
   Future<void> _salvar() async {
     final nome = _nomeController.text.trim();
     final cargo = _cargoController.text.trim();
-    final salario = double.tryParse(
-        _salarioController.text.trim().replaceAll(',', '.'));
 
-    if (nome.isEmpty || cargo.isEmpty || salario == null) return;
+    if (nome.isEmpty || cargo.isEmpty || _salario <= 0) return;
 
     setState(() => _salvando = true);
     try {
@@ -1044,7 +1042,7 @@ class _ModalFuncionarioState extends State<_ModalFuncionario> {
               userId: '',
               nome: nome,
               cargo: cargo,
-              salarioBase: salario,
+              salarioBase: _salario,
               dataAdmissao: DateTime.now(),
               createdAt: DateTime.now(),
             ),
@@ -1080,9 +1078,10 @@ class _ModalFuncionarioState extends State<_ModalFuncionario> {
             const SizedBox(height: 12),
             _campo('Cargo', _cargoController, hint: 'Ex: Cozinheiro'),
             const SizedBox(height: 12),
-            _campo('Salário base', _salarioController,
-                hint: '0,00',
-                teclado: TextInputType.numberWithOptions(decimal: true)),
+            CampoMonetario(
+              label: 'Salário base',
+              onChanged: (v) => _salario = v,
+            ),
             const SizedBox(height: 24),
             _botaoSalvar(_salvando, _salvar, 'Adicionar funcionário'),
             const SizedBox(height: 8),
@@ -1109,7 +1108,7 @@ class _ModalPagamentoFuncionario extends StatefulWidget {
 
 class _ModalPagamentoFuncionarioState
     extends State<_ModalPagamentoFuncionario> {
-  final _valorController = TextEditingController();
+  late double _valor;
   String _tipoSelecionado = 'salario';
   bool _salvando = false;
 
@@ -1127,14 +1126,7 @@ class _ModalPagamentoFuncionarioState
   @override
   void initState() {
     super.initState();
-    _valorController.text =
-        widget.funcionario.salarioBase.toStringAsFixed(2);
-  }
-
-  @override
-  void dispose() {
-    _valorController.dispose();
-    super.dispose();
+    _valor = widget.funcionario.salarioBase;
   }
 
   String _competenciaAtual() {
@@ -1143,9 +1135,7 @@ class _ModalPagamentoFuncionarioState
   }
 
   Future<void> _salvar() async {
-    final valor = double.tryParse(
-        _valorController.text.trim().replaceAll(',', '.'));
-    if (valor == null) return;
+    if (_valor <= 0) return;
 
     setState(() => _salvando = true);
     try {
@@ -1155,7 +1145,7 @@ class _ModalPagamentoFuncionarioState
               funcionarioId: widget.funcionario.id,
               userId: '',
               tipo: _tipoSelecionado,
-              valor: valor,
+              valor: _valor,
               competencia: _competenciaAtual(),
               status: 'pago',
               dataPagamento: DateTime.now(),
@@ -1191,8 +1181,6 @@ class _ModalPagamentoFuncionarioState
                   color: Colors.black87),
             ),
             const SizedBox(height: 20),
-
-            // Tipo
             const Text('Tipo',
                 style: TextStyle(
                     fontSize: 13,
@@ -1213,9 +1201,7 @@ class _ModalPagamentoFuncionarioState
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: sel
-                              ? const Color(0xFFC2463C)
-                              : Colors.white,
+                          color: sel ? const Color(0xFFC2463C) : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: sel
@@ -1238,9 +1224,11 @@ class _ModalPagamentoFuncionarioState
               ),
             ),
             const SizedBox(height: 16),
-            _campo('Valor', _valorController,
-                hint: '0,00',
-                teclado: TextInputType.numberWithOptions(decimal: true)),
+            CampoMonetario(
+              label: 'Valor',
+              valorInicial: widget.funcionario.salarioBase,
+              onChanged: (v) => _valor = v,
+            ),
             const SizedBox(height: 24),
             _botaoSalvar(_salvando, _salvar, 'Confirmar pagamento'),
             const SizedBox(height: 8),
@@ -1357,8 +1345,7 @@ class _EstadoVazio extends StatelessWidget {
                   color: Colors.black54)),
           const SizedBox(height: 8),
           Text(dica,
-              style:
-                  const TextStyle(fontSize: 13, color: Colors.black38)),
+              style: const TextStyle(fontSize: 13, color: Colors.black38)),
         ],
       ),
     );
