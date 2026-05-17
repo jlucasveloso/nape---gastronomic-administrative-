@@ -95,24 +95,6 @@ flutter run
 
 ---
 
-## Arquitetura do projeto
-lib/
-├── features/
-│   ├── auth/         — telas de login e cadastro
-│   ├── dashboard/    — telas principais do usuário
-│   │   ├── model/    — modelos de dados
-│   │   ├── controller/
-│   │   └── ui/       — telas
-│   ├── admin/        — painel administrativo
-│   └── perfil/       — perfil do restaurante
-├── repositories/     — acesso ao banco de dados
-├── shared/
-│   └── widgets/      — componentes reutilizáveis
-├── app_state.dart    — gerenciamento de estado global
-└── main.dart
-
----
-
 ## Observações
 
 - O banco de dados é hospedado no Supabase com Row Level Security (RLS) ativado
